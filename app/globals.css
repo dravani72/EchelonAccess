@@ -656,15 +656,14 @@ a {
   line-height: 1.5;
 }
 
-.review-layout {
+.card-review {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 280px;
   gap: 14px;
 }
 
 .card-preview {
   display: grid;
-  min-height: 240px;
+  min-height: 156px;
   place-items: center;
   border: 1px dashed rgba(150, 163, 181, 0.36);
   border-radius: 8px;
@@ -673,15 +672,72 @@ a {
   text-align: center;
 }
 
-.ocr-box {
-  min-height: 240px;
+.review-section {
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  padding: 13px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.review-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 12px;
+}
+
+.parsed-fields {
+  display: grid;
+  gap: 0;
+  margin: 10px 0 0;
+}
+
+.parsed-fields div {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 10px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 9px 0;
+}
+
+.parsed-fields div:last-child {
+  border-bottom: 0;
+}
+
+.parsed-fields dt {
   color: var(--muted);
-  background: rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+}
+
+.parsed-fields dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
   font-size: 13px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.review-match-name {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.review-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.review-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .graph-canvas {
@@ -762,7 +818,7 @@ a {
   .dossier,
   .intake-layout,
   .intake-methods,
-  .review-layout,
+  .review-actions,
   .rail {
     grid-template-columns: 1fr;
   }
