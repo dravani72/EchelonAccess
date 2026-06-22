@@ -11,6 +11,8 @@ import { RelationshipIntake } from "@/components/relationship-intake";
 import { ReviewStation } from "@/components/review-station";
 import { getAppData } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const data = await getAppData();
 

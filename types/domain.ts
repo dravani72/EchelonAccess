@@ -115,3 +115,10 @@ export type ReviewTask = {
   detail: string;
   status: "needs_review" | "suggested" | "stale" | "sensitive";
 };
+
+export type Workspace = {
+  id: string;
+  name: string;
+  slug?: string;
+  role?: "owner" | "admin" | "member" | "viewer";
+};

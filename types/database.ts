@@ -3,9 +3,39 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      workspaces: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string | null;
+          owner_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["workspaces"]["Row"]> & {
+          name: string;
+          owner_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["workspaces"]["Row"]>;
+      };
+      workspace_members: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          role: "owner" | "admin" | "member" | "viewer";
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["workspace_members"]["Row"]> & {
+          workspace_id: string;
+          user_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["workspace_members"]["Row"]>;
+      };
       people: {
         Row: {
           id: string;
+          workspace_id: string;
           canonical_name: string;
           display_name: string;
           honorific: string | null;
@@ -32,6 +62,7 @@ export type Database = {
       roles: {
         Row: {
           id: string;
+          workspace_id: string;
           person_id: string;
           organization_name: string;
           title: string;
@@ -51,6 +82,7 @@ export type Database = {
       interactions: {
         Row: {
           id: string;
+          workspace_id: string;
           person_id: string | null;
           interaction_date: string;
           type: "meeting" | "email" | "call" | "introduction" | "event" | "proposal" | "note" | "follow_up" | "other";
@@ -70,6 +102,7 @@ export type Database = {
       mandates: {
         Row: {
           id: string;
+          workspace_id: string;
           client_name: string;
           title: string;
           objective: string;
@@ -89,6 +122,7 @@ export type Database = {
       outreach_queue: {
         Row: {
           id: string;
+          workspace_id: string;
           person_name: string;
           mandate_title: string;
           reason: string;
@@ -108,6 +142,7 @@ export type Database = {
       review_tasks: {
         Row: {
           id: string;
+          workspace_id: string;
           title: string;
           detail: string;
           status: "needs_review" | "suggested" | "stale" | "sensitive";

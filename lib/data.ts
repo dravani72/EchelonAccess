@@ -1,7 +1,33 @@
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { interactions, mandates, outreachQueue, people, reviewTasks, roles } from "@/lib/mock-data";
-import type { Interaction, Mandate, OutreachItem, Person, ReviewTask, Role } from "@/types/domain";
+import type { Interaction, Mandate, OutreachItem, Person, ReviewTask, Role, Workspace } from "@/types/domain";
+
+type SupabaseResult<T = Record<string, unknown>> = Promise<{ data: T[] | null; error: { message: string } | null }>;
+type SupabaseSingleResult<T = Record<string, unknown>> = Promise<{ data: T | null; error: { message: string } | null }>;
+type MembershipRow = {
+  role: Workspace["role"];
+  workspaces: { id: string; name: string; slug: string | null } | { id: string; name: string; slug: string | null }[] | null;
+};
+type UntypedSupabase = {
+  auth: {
+    getUser: () => Promise<{ data: { user: { id: string } | null } }>;
+  };
+  from: (table: string) => {
+    select: (columns?: string) => {
+      eq: (column: string, value: string) => SupabaseResult & {
+        order: (columnName: string, options?: { ascending?: boolean }) => SupabaseResult;
+      };
+      order: (columnName: string, options?: { ascending?: boolean }) => SupabaseResult;
+      single: () => SupabaseSingleResult;
+    };
+    insert: (payload: unknown) => Promise<{ error: { message: string } | null }> & {
+      select: (columns?: string) => {
+        single: () => SupabaseSingleResult;
+      };
+    };
+  };
+};
 
 export type AppData = {
   people: Person[];
@@ -10,6 +36,8 @@ export type AppData = {
   mandates: Mandate[];
   outreachQueue: OutreachItem[];
   reviewTasks: ReviewTask[];
+  workspaces: Workspace[];
+  currentWorkspace?: Workspace;
   source: "supabase" | "mock";
 };
 
@@ -19,14 +47,85 @@ export async function getAppData(): Promise<AppData> {
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = (await createSupabaseServerClient()) as unknown as UntypedSupabase;
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return getMockData();
+    }
+
+    let { data: memberships, error: membershipError } = (await supabase
+      .from("workspace_members")
+      .select("role, workspaces(id, name, slug)")
+      .eq("user_id", user.id)) as { data: MembershipRow[] | null; error: { message: string } | null };
+
+    if (membershipError) {
+      return getMockData();
+    }
+
+    if (!memberships?.length) {
+      const { data: workspace, error: workspaceError } = (await supabase
+        .from("workspaces")
+        .insert({
+          name: "Private Relationship Desk",
+          owner_id: user.id
+        })
+        .select("id, name, slug")
+        .single()) as {
+        data: { id: string; name: string; slug: string | null } | null;
+        error: { message: string } | null;
+      };
+
+      if (workspaceError || !workspace) {
+        return getMockData();
+      }
+
+      const { error: memberError } = await supabase.from("workspace_members").insert({
+        workspace_id: workspace.id,
+        user_id: user.id,
+        role: "owner"
+      });
+
+      if (memberError) {
+        return getMockData();
+      }
+
+      memberships = [
+        {
+          role: "owner",
+          workspaces: workspace
+        }
+      ];
+    }
+
+    const workspaces = memberships
+      .map((membership: MembershipRow) => {
+        const workspace = Array.isArray(membership.workspaces) ? membership.workspaces[0] : membership.workspaces;
+        if (!workspace) return null;
+        return {
+          id: workspace.id,
+          name: workspace.name,
+          slug: workspace.slug ?? undefined,
+          role: membership.role
+        } satisfies Workspace;
+      })
+      .filter(Boolean) as Workspace[];
+
+    const currentWorkspace = workspaces[0];
+
+    if (!currentWorkspace) {
+      return getMockData();
+    }
+
     const [peopleResult, rolesResult, interactionsResult, mandatesResult, outreachResult, reviewResult] = await Promise.all([
-      supabase.from("people").select("*").order("updated_at", { ascending: false }),
-      supabase.from("roles").select("*").order("is_current", { ascending: false }),
-      supabase.from("interactions").select("*").order("interaction_date", { ascending: false }),
-      supabase.from("mandates").select("*").order("updated_at", { ascending: false }),
-      supabase.from("outreach_queue").select("*").order("due_date", { ascending: true }),
-      supabase.from("review_tasks").select("*").order("updated_at", { ascending: false })
+      supabase.from("people").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false }),
+      supabase.from("roles").select("*").eq("workspace_id", currentWorkspace.id).order("is_current", { ascending: false }),
+      supabase.from("interactions").select("*").eq("workspace_id", currentWorkspace.id).order("interaction_date", { ascending: false }),
+      supabase.from("mandates").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false }),
+      supabase.from("outreach_queue").select("*").eq("workspace_id", currentWorkspace.id).order("due_date", { ascending: true }),
+      supabase.from("review_tasks").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false })
     ]);
 
     const hasError = [peopleResult, rolesResult, interactionsResult, mandatesResult, outreachResult, reviewResult].some(
@@ -38,12 +137,14 @@ export async function getAppData(): Promise<AppData> {
     }
 
     return {
-      people: (peopleResult.data ?? []).map(mapPerson),
-      roles: (rolesResult.data ?? []).map(mapRole),
-      interactions: (interactionsResult.data ?? []).map(mapInteraction),
-      mandates: (mandatesResult.data ?? []).map(mapMandate),
-      outreachQueue: (outreachResult.data ?? []).map(mapOutreachItem),
-      reviewTasks: (reviewResult.data ?? []).map(mapReviewTask),
+      people: ((peopleResult.data ?? []) as Parameters<typeof mapPerson>[0][]).map(mapPerson),
+      roles: ((rolesResult.data ?? []) as Parameters<typeof mapRole>[0][]).map(mapRole),
+      interactions: ((interactionsResult.data ?? []) as Parameters<typeof mapInteraction>[0][]).map(mapInteraction),
+      mandates: ((mandatesResult.data ?? []) as Parameters<typeof mapMandate>[0][]).map(mapMandate),
+      outreachQueue: ((outreachResult.data ?? []) as Parameters<typeof mapOutreachItem>[0][]).map(mapOutreachItem),
+      reviewTasks: ((reviewResult.data ?? []) as Parameters<typeof mapReviewTask>[0][]).map(mapReviewTask),
+      workspaces,
+      currentWorkspace,
       source: "supabase"
     };
   } catch {
@@ -59,6 +160,8 @@ function getMockData(): AppData {
     mandates,
     outreachQueue,
     reviewTasks,
+    workspaces: [{ id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" }],
+    currentWorkspace: { id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" },
     source: "mock"
   };
 }

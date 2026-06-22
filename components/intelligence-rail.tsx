@@ -6,7 +6,18 @@ export function IntelligenceRail({ data }: { data: AppData }) {
     <aside className="rail">
       <div className="rail-card">
         <h3>Data Source</h3>
-        <p>{data.source === "supabase" ? "Connected to Supabase." : "Using local mock data until Supabase env vars are set."}</p>
+        <p>
+          {data.source === "supabase"
+            ? `Connected to Supabase workspace: ${data.currentWorkspace?.name ?? "Workspace"}.`
+            : "Using local mock data until Supabase env vars are set."}
+        </p>
+      </div>
+      <div className="rail-card">
+        <h3>Portal Access</h3>
+        <p>
+          {data.workspaces.length} workspace{data.workspaces.length === 1 ? "" : "s"} available. Role:{" "}
+          {data.currentWorkspace?.role ?? "owner"}.
+        </p>
       </div>
       <div className="rail-card">
         <h3>Suggested Next Move</h3>

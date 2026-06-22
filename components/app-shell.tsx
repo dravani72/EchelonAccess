@@ -15,6 +15,7 @@ import {
   SquarePen,
   Users
 } from "lucide-react";
+import { OfflineStatus } from "@/components/offline-status";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
@@ -70,6 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Bell size={16} />
             Review queue
           </button>
+          <OfflineStatus />
           <a className="button primary" href="#Add Relationship">
             <Plus size={16} />
             Add
