@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { withBasePath } from "@/lib/base-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -9,6 +10,7 @@ import { hasSupabaseConfig } from "@/lib/supabase/config";
 const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "echelon";
 
 export function AccessGate({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isSupabaseMode, setIsSupabaseMode] = useState(false);
   const [email, setEmail] = useState("");
@@ -28,16 +30,22 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getSession().then(({ data }) => {
       setIsUnlocked(Boolean(data.session));
+      if (data.session) {
+        router.refresh();
+      }
     });
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsUnlocked(Boolean(session));
+      if (session) {
+        router.refresh();
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
