@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
@@ -48,7 +49,7 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `${window.location.origin}${withBasePath("/auth/callback")}`
         }
       });
 

@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { withBasePath } from "@/lib/base-path";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "EchelonAccess",
   description: "Private relationship intelligence for elite-network deal origination",
-  manifest: "/manifest.webmanifest",
+  manifest: withBasePath("/manifest.webmanifest"),
   appleWebApp: {
     capable: true,
     title: "EchelonAccess",

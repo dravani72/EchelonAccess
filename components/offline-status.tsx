@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 import { syncPendingChanges } from "@/lib/offline/sync";
 
 export function OfflineStatus() {
@@ -21,7 +22,9 @@ export function OfflineStatus() {
     window.addEventListener("offline", handleOffline);
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      navigator.serviceWorker
+        .register(withBasePath("/sw.js"), { scope: withBasePath("/") || "/" })
+        .catch(() => undefined);
     }
 
     return () => {

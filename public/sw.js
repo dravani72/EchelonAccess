@@ -1,5 +1,7 @@
 const CACHE_NAME = "echelon-access-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icon.svg"];
+const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+const withScope = (path) => `${scopePath}${path}`;
+const APP_SHELL = [withScope("/"), withScope("/manifest.webmanifest"), withScope("/icon.svg")];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -25,6 +27,6 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
+      .catch(() => caches.match(event.request).then((cached) => cached || caches.match(withScope("/"))))
   );
 });
