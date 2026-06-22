@@ -12,11 +12,13 @@ import {
   Search,
   Settings,
   Sparkles,
+  SquarePen,
   Users
 } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
+  { label: "Add Relationship", icon: SquarePen },
   { label: "People", icon: Users },
   { label: "Organizations", icon: Building2 },
   { label: "Business Cards", icon: FileStack },
@@ -68,10 +70,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Bell size={16} />
             Review queue
           </button>
-          <button className="button primary" type="button">
+          <a className="button primary" href="#Add Relationship">
             <Plus size={16} />
             Add
-          </button>
+          </a>
         </header>
         {children}
       </main>
