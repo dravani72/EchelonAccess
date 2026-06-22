@@ -9,8 +9,11 @@ import { PersonDossier } from "@/components/person-dossier";
 import { RelationshipGraph } from "@/components/relationship-graph";
 import { RelationshipIntake } from "@/components/relationship-intake";
 import { ReviewStation } from "@/components/review-station";
+import { getAppData } from "@/lib/data";
 
-export default function Home() {
+export default async function Home() {
+  const data = await getAppData();
+
   return (
     <AccessGate>
       <AppShell>
@@ -23,18 +26,18 @@ export default function Home() {
               </p>
             </section>
 
-            <Metrics />
+            <Metrics data={data} />
             <RelationshipIntake />
-            <PeopleTable />
-            <PersonDossier />
+            <PeopleTable people={data.people} />
+            <PersonDossier people={data.people} roles={data.roles} interactions={data.interactions} />
             <div className="grid-two">
               <ReviewStation />
               <RelationshipGraph />
             </div>
-            <MandatesPanel />
-            <OutreachQueue />
+            <MandatesPanel mandates={data.mandates} />
+            <OutreachQueue outreachQueue={data.outreachQueue} />
           </div>
-          <IntelligenceRail />
+          <IntelligenceRail data={data} />
         </div>
       </AppShell>
     </AccessGate>

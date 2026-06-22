@@ -1,8 +1,8 @@
 import { Badge } from "@/components/badge";
 import { formatStatus } from "@/lib/format";
-import { mandates } from "@/lib/mock-data";
+import type { Mandate } from "@/types/domain";
 
-export function MandatesPanel() {
+export function MandatesPanel({ mandates }: { mandates: Mandate[] }) {
   return (
     <section className="panel" id="Mandates">
       <div className="panel-header">

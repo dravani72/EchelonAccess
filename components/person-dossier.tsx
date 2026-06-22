@@ -1,10 +1,21 @@
 import { Badge } from "@/components/badge";
 import { confidenceLabel } from "@/lib/format";
-import { interactions, people, roles } from "@/lib/mock-data";
+import type { Interaction, Person, Role } from "@/types/domain";
 
-const person = people[0];
+export function PersonDossier({
+  people,
+  roles,
+  interactions
+}: {
+  people: Person[];
+  roles: Role[];
+  interactions: Interaction[];
+}) {
+  const person = people[0];
+  if (!person) {
+    return null;
+  }
 
-export function PersonDossier() {
   const personRoles = roles.filter((role) => role.personId === person.id);
   const personInteractions = interactions.filter((interaction) => interaction.personId === person.id);
 

@@ -1,14 +1,16 @@
-import { reviewTasks, mandates, outreachQueue, people } from "@/lib/mock-data";
+import type { AppData } from "@/lib/data";
 
-const staleHighValue = people.filter((person) => person.relationshipStrength >= 3 && person.warmthStatus !== "direct").length;
-const activeMandates = mandates.filter((mandate) => mandate.status === "active").length;
-const awaitingOutreach = outreachQueue.filter((item) => item.status === "draft_ready" || item.status === "awaiting_approval").length;
+export function Metrics({ data }: { data: AppData }) {
+  const staleHighValue = data.people.filter((person) => person.relationshipStrength >= 3 && person.warmthStatus !== "direct").length;
+  const activeMandates = data.mandates.filter((mandate) => mandate.status === "active").length;
+  const awaitingOutreach = data.outreachQueue.filter(
+    (item) => item.status === "draft_ready" || item.status === "awaiting_approval"
+  ).length;
 
-export function Metrics() {
   const metrics = [
     {
       label: "Unreviewed intelligence",
-      value: reviewTasks.length,
+      value: data.reviewTasks.length,
       context: "cards, duplicates, and role changes"
     },
     {

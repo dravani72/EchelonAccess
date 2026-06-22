@@ -1,8 +1,8 @@
 import { Badge } from "@/components/badge";
 import { formatStatus } from "@/lib/format";
-import { outreachQueue } from "@/lib/mock-data";
+import type { OutreachItem } from "@/types/domain";
 
-export function OutreachQueue() {
+export function OutreachQueue({ outreachQueue }: { outreachQueue: OutreachItem[] }) {
   return (
     <section className="panel" id="Outreach Queue">
       <div className="panel-header">

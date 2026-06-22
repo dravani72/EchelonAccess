@@ -1,9 +1,13 @@
 import { Badge } from "@/components/badge";
-import { reviewTasks } from "@/lib/mock-data";
+import type { AppData } from "@/lib/data";
 
-export function IntelligenceRail() {
+export function IntelligenceRail({ data }: { data: AppData }) {
   return (
     <aside className="rail">
+      <div className="rail-card">
+        <h3>Data Source</h3>
+        <p>{data.source === "supabase" ? "Connected to Supabase." : "Using local mock data until Supabase env vars are set."}</p>
+      </div>
       <div className="rail-card">
         <h3>Suggested Next Move</h3>
         <p>
@@ -13,7 +17,7 @@ export function IntelligenceRail() {
       <div className="rail-card">
         <h3>Review Queue</h3>
         <div className="stack">
-          {reviewTasks.map((task) => (
+          {data.reviewTasks.map((task) => (
             <div key={task.id}>
               <div className="person-name">{task.title}</div>
               <p>{task.detail}</p>

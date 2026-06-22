@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-table";
 import { Badge } from "@/components/badge";
 import { formatStatus } from "@/lib/format";
-import { people } from "@/lib/mock-data";
 import type { Person } from "@/types/domain";
 
 const columnHelper = createColumnHelper<Person>();
@@ -51,7 +50,7 @@ const columns = [
   })
 ];
 
-export function PeopleTable() {
+export function PeopleTable({ people }: { people: Person[] }) {
   const table = useReactTable({
     data: people,
     columns,
