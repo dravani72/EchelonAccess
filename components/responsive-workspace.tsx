@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/badge";
 import { withBasePath } from "@/lib/base-path";
 import { formatStatus } from "@/lib/format";
@@ -20,12 +20,16 @@ const MandatesPanel = dynamic(() => import("@/components/mandates-panel").then((
   ssr: false,
   loading: () => <PanelLoading label="Loading mandates" />
 });
+const OrganizationsPanel = dynamic(() => import("@/components/organizations-panel").then((mod) => mod.OrganizationsPanel), {
+  ssr: false,
+  loading: () => <PanelLoading label="Loading organizations" />
+});
 const OutreachQueue = dynamic(() => import("@/components/outreach-queue").then((mod) => mod.OutreachQueue), {
   ssr: false,
   loading: () => <PanelLoading label="Loading outreach" />
 });
 
-type WorkspaceView = "network" | "opportunities" | "people" | "dossier" | "mandates" | "outreach";
+type WorkspaceView = "network" | "opportunities" | "people" | "dossier" | "mandates" | "organizations" | "outreach";
 type SharedCluster = {
   label: string;
   kind: "Sector" | "Geography" | "Institution" | "Mandate";
@@ -69,8 +73,18 @@ const views: { id: WorkspaceView; label: string }[] = [
   { id: "people", label: "People" },
   { id: "dossier", label: "Dossier" },
   { id: "mandates", label: "Mandates" },
+  { id: "organizations", label: "Organizations" },
   { id: "outreach", label: "Outreach" }
 ];
+
+const hashViewMap: Record<string, WorkspaceView> = {
+  graph: "network",
+  people: "people",
+  dossier: "dossier",
+  mandates: "mandates",
+  organizations: "organizations",
+  outreach: "outreach"
+};
 
 export function ResponsiveWorkspace({ data }: { data: AppData }) {
   const [activeView, setActiveView] = useState<WorkspaceView>("network");
@@ -92,6 +106,19 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
   function openView(view: WorkspaceView) {
     startTransition(() => setActiveView(view));
   }
+
+  useEffect(() => {
+    function syncHashView() {
+      const nextView = hashViewMap[window.location.hash.replace("#", "")];
+      if (nextView) {
+        startTransition(() => setActiveView(nextView));
+      }
+    }
+
+    syncHashView();
+    window.addEventListener("hashchange", syncHashView);
+    return () => window.removeEventListener("hashchange", syncHashView);
+  }, []);
 
   return (
     <section className="panel" aria-busy={isPending} id="graph" style={{ overflow: "visible" }}>
@@ -141,6 +168,7 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
           <PersonDossier businessCards={data.businessCards} interactions={data.interactions} people={data.people} roles={data.roles} />
         ) : null}
         {activeView === "mandates" ? <MandatesPanel mandates={data.mandates} /> : null}
+        {activeView === "organizations" ? <OrganizationsPanel mandates={data.mandates} people={data.people} roles={data.roles} /> : null}
         {activeView === "outreach" ? <OutreachQueue outreachQueue={data.outreachQueue} /> : null}
       </div>
     </section>
