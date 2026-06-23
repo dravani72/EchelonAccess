@@ -232,6 +232,59 @@ a {
   padding: 24px;
 }
 
+.mock-data-mode {
+  --mock-yellow: #d4a72c;
+  --mock-yellow-soft: rgba(212, 167, 44, 0.2);
+  --mock-yellow-faint: rgba(212, 167, 44, 0.08);
+}
+
+.mock-data-mode .metric,
+.mock-data-mode .panel,
+.mock-data-mode .rail-card,
+.mock-data-mode .identity-card,
+.mock-data-mode .review-section {
+  border-color: rgba(212, 167, 44, 0.58);
+  background:
+    linear-gradient(0deg, var(--mock-yellow-faint), var(--mock-yellow-faint)),
+    rgba(18, 24, 33, 0.74);
+}
+
+.mock-data-mode .panel-header,
+.mock-data-mode .table th,
+.mock-data-mode .table td,
+.mock-data-mode .timeline-item,
+.mock-data-mode .tabs {
+  border-color: rgba(212, 167, 44, 0.28);
+}
+
+.mock-data-mode .table tbody tr,
+.mock-data-mode .field-list > div,
+.mock-data-mode .card-preview,
+.mock-data-mode .empty-state {
+  background: var(--mock-yellow-faint);
+}
+
+.mock-data-mode .section-title::after {
+  content: "Mock data";
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-left: 10px;
+  border: 1px solid rgba(212, 167, 44, 0.62);
+  border-radius: 999px;
+  color: #f4ca5e;
+  background: var(--mock-yellow-soft);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 650;
+  vertical-align: middle;
+}
+
+.mock-data-mode .person-name,
+.mock-data-mode .metric-value {
+  color: #f2c34c;
+}
+
 .section-title {
   margin: 0;
   font-size: 24px;

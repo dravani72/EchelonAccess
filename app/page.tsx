@@ -19,7 +19,7 @@ export default async function Home() {
   return (
     <AccessGate>
       <AppShell>
-        <div className="page">
+        <div className={`page ${data.source === "mock" ? "mock-data-mode" : ""}`}>
           <div className="stack">
             <section>
               <h1 className="section-title">Relationship Intelligence Desk</h1>
