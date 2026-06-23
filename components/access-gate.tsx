@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { withBasePath } from "@/lib/base-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { getSupabaseConfigStatus } from "@/lib/supabase/config";
 
 const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "echelon";
 
@@ -13,14 +13,24 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isSupabaseMode, setIsSupabaseMode] = useState(false);
+  const [configError, setConfigError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    const useSupabase = hasSupabaseConfig();
+    const configStatus = getSupabaseConfigStatus();
+    const useSupabase = configStatus.state === "ready";
+    const isBlockedByConfig = configStatus.isRequired && configStatus.state !== "ready";
+
     setIsSupabaseMode(useSupabase);
+    setConfigError(isBlockedByConfig ? configStatus.message : "");
+
+    if (isBlockedByConfig) {
+      setIsUnlocked(false);
+      return;
+    }
 
     if (!useSupabase) {
       setIsUnlocked(window.sessionStorage.getItem("echelon-unlocked") === "true");
@@ -51,6 +61,11 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
     event.preventDefault();
     setError("");
     setNotice("");
+
+    if (configError) {
+      setError(configError);
+      return;
+    }
 
     if (isSupabaseMode) {
       const supabase = createSupabaseBrowserClient();
@@ -91,53 +106,66 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
         </div>
         <h1 className="lock-title">EchelonAccess</h1>
         <p className="lock-copy">
-          Private relationship intelligence workspace. {isSupabaseMode ? "Sign in to your workspace portal." : "Enter the workspace password to unlock the offline demo."}
+          Private relationship intelligence workspace.{" "}
+          {configError
+            ? "Supabase configuration needs attention before the portal can open."
+            : isSupabaseMode
+              ? "Sign in to your workspace portal."
+              : "Enter the workspace password to unlock the offline demo."}
         </p>
 
-        <form className="lock-form" onSubmit={handleSubmit}>
-          {isSupabaseMode ? (
-            <label>
-              <span className="field-label">Email</span>
-              <input
-                autoComplete="email"
-                autoFocus
-                className="text-input"
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                  setError("");
-                }}
-                placeholder="you@example.com"
-                type="email"
-                value={email}
-              />
-            </label>
-          ) : (
-            <label>
-              <span className="field-label">Workspace password</span>
-              <input
-                autoComplete="current-password"
-                autoFocus
-                className="text-input"
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  setError("");
-                }}
-                placeholder="Enter password"
-                type="password"
-                value={password}
-              />
-            </label>
-          )}
-          {error ? <div className="form-error">{error}</div> : null}
-          {notice ? <div className="form-notice">{notice}</div> : null}
-          <button className="button primary lock-button" type="submit">
-            {isSupabaseMode ? <Mail size={16} /> : <ShieldCheck size={16} />}
-            {isSupabaseMode ? "Send login link" : "Unlock"}
-          </button>
-        </form>
+        {configError ? (
+          <div className="form-error">{configError}</div>
+        ) : (
+          <form className="lock-form" onSubmit={handleSubmit}>
+            {isSupabaseMode ? (
+              <label>
+                <span className="field-label">Email</span>
+                <input
+                  autoComplete="email"
+                  autoFocus
+                  className="text-input"
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setError("");
+                  }}
+                  placeholder="you@example.com"
+                  type="email"
+                  value={email}
+                />
+              </label>
+            ) : (
+              <label>
+                <span className="field-label">Workspace password</span>
+                <input
+                  autoComplete="current-password"
+                  autoFocus
+                  className="text-input"
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setError("");
+                  }}
+                  placeholder="Enter password"
+                  type="password"
+                  value={password}
+                />
+              </label>
+            )}
+            {error ? <div className="form-error">{error}</div> : null}
+            {notice ? <div className="form-notice">{notice}</div> : null}
+            <button className="button primary lock-button" type="submit">
+              {isSupabaseMode ? <Mail size={16} /> : <ShieldCheck size={16} />}
+              {isSupabaseMode ? "Send login link" : "Unlock"}
+            </button>
+          </form>
+        )}
 
         <div className="lock-hint">
-          {isSupabaseMode ? "Supabase Auth protects each workspace." : `Demo password: ${DEMO_PASSWORD}`}
+          {configError
+            ? "Fix the Netlify environment variables, then clear cache and redeploy."
+            : isSupabaseMode
+              ? "Supabase Auth protects each workspace."
+              : `Demo password: ${DEMO_PASSWORD}`}
         </div>
       </section>
     </main>

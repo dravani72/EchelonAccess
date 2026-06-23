@@ -8,8 +8,8 @@ export function IntelligenceRail({ data }: { data: AppData }) {
         <h3>Data Source</h3>
         <p>
           {data.source === "supabase"
-            ? `Connected to Supabase workspace: ${data.currentWorkspace?.name ?? "Workspace"}.`
-            : "Using local mock data until Supabase env vars are set."}
+            ? data.diagnostic ?? `Connected to Supabase workspace: ${data.currentWorkspace?.name ?? "Workspace"}.`
+            : "Using local mock data because Supabase is not required in this environment."}
         </p>
       </div>
       <div className="rail-card">

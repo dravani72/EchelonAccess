@@ -1,4 +1,4 @@
-import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { getSupabaseConfigStatus } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { interactions, mandates, outreachQueue, people, reviewTasks, roles } from "@/lib/mock-data";
 import type { Interaction, Mandate, OutreachItem, Person, ReviewTask, Role, Workspace } from "@/types/domain";
@@ -39,10 +39,17 @@ export type AppData = {
   workspaces: Workspace[];
   currentWorkspace?: Workspace;
   source: "supabase" | "mock";
+  diagnostic?: string;
 };
 
 export async function getAppData(): Promise<AppData> {
-  if (!hasSupabaseConfig()) {
+  const configStatus = getSupabaseConfigStatus();
+
+  if (configStatus.state !== "ready") {
+    if (configStatus.isRequired) {
+      return getEmptySupabaseData(configStatus.message);
+    }
+
     return getMockData();
   }
 
@@ -53,7 +60,7 @@ export async function getAppData(): Promise<AppData> {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return getMockData();
+      return getEmptySupabaseData("Signed out. Supabase Auth is configured, but no server session is available yet.");
     }
 
     let { data: memberships, error: membershipError } = (await supabase
@@ -62,7 +69,7 @@ export async function getAppData(): Promise<AppData> {
       .eq("user_id", user.id)) as { data: MembershipRow[] | null; error: { message: string } | null };
 
     if (membershipError) {
-      return getMockData();
+      return getEmptySupabaseData(`Could not read workspace memberships: ${membershipError.message}`);
     }
 
     if (!memberships?.length) {
@@ -79,7 +86,9 @@ export async function getAppData(): Promise<AppData> {
       };
 
       if (workspaceError || !workspace) {
-        return getMockData();
+        return getEmptySupabaseData(
+          `Could not create the first workspace: ${workspaceError?.message ?? "No workspace returned."}`
+        );
       }
 
       const { error: memberError } = await supabase.from("workspace_members").insert({
@@ -89,7 +98,7 @@ export async function getAppData(): Promise<AppData> {
       });
 
       if (memberError) {
-        return getMockData();
+        return getEmptySupabaseData(`Could not create the first workspace membership: ${memberError.message}`);
       }
 
       memberships = [
@@ -116,7 +125,7 @@ export async function getAppData(): Promise<AppData> {
     const currentWorkspace = workspaces[0];
 
     if (!currentWorkspace) {
-      return getMockData();
+      return getEmptySupabaseData("Supabase returned no workspace for this user.");
     }
 
     const [peopleResult, rolesResult, interactionsResult, mandatesResult, outreachResult, reviewResult] = await Promise.all([
@@ -128,12 +137,19 @@ export async function getAppData(): Promise<AppData> {
       supabase.from("review_tasks").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false })
     ]);
 
-    const hasError = [peopleResult, rolesResult, interactionsResult, mandatesResult, outreachResult, reviewResult].some(
-      (result) => result.error
-    );
+    const tableErrors = [
+      ["people", peopleResult.error],
+      ["roles", rolesResult.error],
+      ["interactions", interactionsResult.error],
+      ["mandates", mandatesResult.error],
+      ["outreach_queue", outreachResult.error],
+      ["review_tasks", reviewResult.error]
+    ].filter(([, error]) => error) as [string, { message: string }][];
 
-    if (hasError) {
-      return getMockData();
+    if (tableErrors.length) {
+      return getEmptySupabaseData(
+        `Could not read Supabase tables: ${tableErrors.map(([table, error]) => `${table}: ${error.message}`).join("; ")}`
+      );
     }
 
     return {
@@ -145,10 +161,14 @@ export async function getAppData(): Promise<AppData> {
       reviewTasks: ((reviewResult.data ?? []) as Parameters<typeof mapReviewTask>[0][]).map(mapReviewTask),
       workspaces,
       currentWorkspace,
-      source: "supabase"
+      source: "supabase",
+      diagnostic:
+        peopleResult.data?.length || mandatesResult.data?.length || reviewResult.data?.length
+          ? undefined
+          : "Connected to Supabase, but this workspace has no seeded relationship records yet."
     };
-  } catch {
-    return getMockData();
+  } catch (error) {
+    return getEmptySupabaseData(error instanceof Error ? error.message : "Unknown Supabase data loading error.");
   }
 }
 
@@ -163,6 +183,20 @@ function getMockData(): AppData {
     workspaces: [{ id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" }],
     currentWorkspace: { id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" },
     source: "mock"
+  };
+}
+
+function getEmptySupabaseData(diagnostic: string): AppData {
+  return {
+    people: [],
+    roles: [],
+    interactions: [],
+    mandates: [],
+    outreachQueue: [],
+    reviewTasks: [],
+    workspaces: [],
+    source: "supabase",
+    diagnostic
   };
 }
 

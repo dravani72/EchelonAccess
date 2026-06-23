@@ -1,5 +1,51 @@
+export type SupabaseConfigStatus = {
+  state: "ready" | "missing" | "invalid";
+  isRequired: boolean;
+  message: string;
+};
+
 export function hasSupabaseConfig() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !isServiceRoleKey());
+  return getSupabaseConfigStatus().state === "ready";
+}
+
+export function isSupabaseRequired() {
+  if (process.env.NEXT_PUBLIC_REQUIRE_SUPABASE === "false") {
+    return false;
+  }
+
+  return (
+    process.env.NEXT_PUBLIC_REQUIRE_SUPABASE === "true" ||
+    process.env.NODE_ENV === "production" ||
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  );
+}
+
+export function getSupabaseConfigStatus(): SupabaseConfigStatus {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isRequired = isSupabaseRequired();
+
+  if (!url || !anonKey) {
+    return {
+      state: "missing",
+      isRequired,
+      message: "Supabase is missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    };
+  }
+
+  if (isServiceRoleKey()) {
+    return {
+      state: "invalid",
+      isRequired,
+      message: "NEXT_PUBLIC_SUPABASE_ANON_KEY is a secret/service_role key. Replace it with a Publishable Key."
+    };
+  }
+
+  return {
+    state: "ready",
+    isRequired,
+    message: "Supabase configuration is ready."
+  };
 }
 
 export function getSupabaseConfig() {
