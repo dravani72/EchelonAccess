@@ -4,6 +4,10 @@ import type { BusinessCard, Interaction, Mandate, OutreachItem, Person, ReviewTa
 
 type SupabaseResult<T = Record<string, unknown>> = Promise<{ data: T[] | null; error: { message: string } | null }>;
 type SupabaseSingleResult<T = Record<string, unknown>> = Promise<{ data: T | null; error: { message: string } | null }>;
+type SupabaseQuery<T = Record<string, unknown>> = SupabaseResult<T> & {
+  limit: (count: number) => SupabaseQuery<T>;
+  order: (columnName: string, options?: { ascending?: boolean }) => SupabaseQuery<T>;
+};
 type MembershipRow = {
   role: Workspace["role"];
   workspaces: { id: string; name: string; slug: string | null } | { id: string; name: string; slug: string | null }[] | null;
@@ -14,10 +18,8 @@ type UntypedSupabase = {
   };
   from: (table: string) => {
     select: (columns?: string) => {
-      eq: (column: string, value: string) => SupabaseResult & {
-        order: (columnName: string, options?: { ascending?: boolean }) => SupabaseResult;
-      };
-      order: (columnName: string, options?: { ascending?: boolean }) => SupabaseResult;
+      eq: (column: string, value: string) => SupabaseQuery;
+      order: (columnName: string, options?: { ascending?: boolean }) => SupabaseQuery;
       single: () => SupabaseSingleResult;
     };
     insert: (payload: unknown) => Promise<{ error: { message: string } | null }> & {
@@ -31,6 +33,16 @@ type UntypedSupabase = {
       createSignedUrl: (path: string, expiresIn: number) => Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }>;
     };
   };
+};
+
+const INITIAL_DATA_LIMITS = {
+  people: 400,
+  roles: 800,
+  interactions: 400,
+  businessCards: 100,
+  mandates: 40,
+  outreachQueue: 100,
+  reviewTasks: 60
 };
 
 const mockSeedIds = new Set<string>();
@@ -141,13 +153,48 @@ export async function getAppData(): Promise<AppData> {
     }
 
     const [peopleResult, rolesResult, interactionsResult, businessCardsResult, mandatesResult, outreachResult, reviewResult] = await Promise.all([
-      supabase.from("people").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false }),
-      supabase.from("roles").select("*").eq("workspace_id", currentWorkspace.id).order("is_current", { ascending: false }),
-      supabase.from("interactions").select("*").eq("workspace_id", currentWorkspace.id).order("interaction_date", { ascending: false }),
-      supabase.from("business_cards").select("*").eq("workspace_id", currentWorkspace.id).order("scan_date", { ascending: false }),
-      supabase.from("mandates").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false }),
-      supabase.from("outreach_queue").select("*").eq("workspace_id", currentWorkspace.id).order("due_date", { ascending: true }),
-      supabase.from("review_tasks").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false })
+      supabase
+        .from("people")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("updated_at", { ascending: false })
+        .limit(INITIAL_DATA_LIMITS.people),
+      supabase
+        .from("roles")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("is_current", { ascending: false })
+        .limit(INITIAL_DATA_LIMITS.roles),
+      supabase
+        .from("interactions")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("interaction_date", { ascending: false })
+        .limit(INITIAL_DATA_LIMITS.interactions),
+      supabase
+        .from("business_cards")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("scan_date", { ascending: false })
+        .limit(INITIAL_DATA_LIMITS.businessCards),
+      supabase
+        .from("mandates")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("updated_at", { ascending: false })
+        .limit(INITIAL_DATA_LIMITS.mandates),
+      supabase
+        .from("outreach_queue")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("due_date", { ascending: true })
+        .limit(INITIAL_DATA_LIMITS.outreachQueue),
+      supabase
+        .from("review_tasks")
+        .select("*")
+        .eq("workspace_id", currentWorkspace.id)
+        .order("updated_at", { ascending: false })
+        .limit(INITIAL_DATA_LIMITS.reviewTasks)
     ]);
 
     const tableErrors = [
@@ -166,20 +213,13 @@ export async function getAppData(): Promise<AppData> {
       );
     }
 
-    const signedCardUrls = await signStoragePaths(
-      supabase,
-      (businessCardsResult.data ?? [])
-        .map((card) => (card as Parameters<typeof mapBusinessCard>[0]).image_url)
-        .filter(Boolean) as string[]
-    );
-
     const realPeople = ((peopleResult.data ?? []) as Parameters<typeof mapPerson>[0][]).map(mapPerson).filter((record) => !record.isMockData);
     const realRoles = ((rolesResult.data ?? []) as Parameters<typeof mapRole>[0][]).map(mapRole).filter((record) => !record.isMockData);
     const realInteractions = ((interactionsResult.data ?? []) as Parameters<typeof mapInteraction>[0][])
       .map(mapInteraction)
       .filter((record) => !record.isMockData);
     const realBusinessCards = ((businessCardsResult.data ?? []) as Parameters<typeof mapBusinessCard>[0][])
-      .map((card) => mapBusinessCard(card, card.image_url ? signedCardUrls.get(card.image_url) : undefined))
+      .map((card) => mapBusinessCard(card))
       .filter((record) => !record.isMockData);
     const realMandates = ((mandatesResult.data ?? []) as Parameters<typeof mapMandate>[0][])
       .map(mapMandate)
@@ -204,7 +244,7 @@ export async function getAppData(): Promise<AppData> {
       source: "supabase",
       diagnostic:
         realPeople.length || realMandates.length || realReviewTasks.length
-          ? undefined
+          ? `Showing a responsive working set: latest ${INITIAL_DATA_LIMITS.people} people, ${INITIAL_DATA_LIMITS.mandates} mandates, and ${INITIAL_DATA_LIMITS.businessCards} card records.`
           : "Connected to Supabase, but this workspace has no relationship records yet."
     };
   } catch (error) {
@@ -584,17 +624,4 @@ function clampStrength(value: number): Person["relationshipStrength"] {
   if (value >= 5) return 5;
   if (value <= 1) return 1;
   return value as Person["relationshipStrength"];
-}
-
-async function signStoragePaths(supabase: UntypedSupabase, paths: string[]) {
-  const signedUrls = new Map<string, string>();
-  await Promise.all(
-    Array.from(new Set(paths)).map(async (path) => {
-      const { data, error } = await supabase.storage.from("relationship-artifacts").createSignedUrl(path, 60 * 30);
-      if (!error && data?.signedUrl) {
-        signedUrls.set(path, data.signedUrl);
-      }
-    })
-  );
-  return signedUrls;
 }
