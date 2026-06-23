@@ -29,7 +29,7 @@ export function IntelligenceRail({ data }: { data: AppData }) {
         <h3>Review Queue</h3>
         <div className="stack">
           {data.reviewTasks.map((task) => (
-            <div key={task.id}>
+            <div className={task.isMockData ? "mock-record mock-rail-record" : undefined} key={task.id}>
               <div className="person-name">{task.title}</div>
               <p>{task.detail}</p>
               <div className="badge-row" style={{ marginTop: 8 }}>

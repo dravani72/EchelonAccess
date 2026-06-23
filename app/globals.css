@@ -13,6 +13,12 @@
   --red: #f07979;
   --purple: #b995ff;
   --gray: #8c98a8;
+  --mock-yellow: #d4a72c;
+  --mock-yellow-text: #f2c34c;
+  --mock-yellow-muted: #d9b653;
+  --mock-yellow-subtle: #b89638;
+  --mock-yellow-soft: rgba(212, 167, 44, 0.2);
+  --mock-yellow-faint: rgba(212, 167, 44, 0.08);
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
@@ -233,12 +239,7 @@ a {
 }
 
 .mock-data-mode {
-  --mock-yellow: #d4a72c;
-  --mock-yellow-text: #f2c34c;
-  --mock-yellow-muted: #d9b653;
-  --mock-yellow-subtle: #b89638;
-  --mock-yellow-soft: rgba(212, 167, 44, 0.2);
-  --mock-yellow-faint: rgba(212, 167, 44, 0.08);
+  color: var(--mock-yellow-text);
 }
 
 .mock-data-mode .metric,
@@ -326,6 +327,47 @@ a {
 
 .mock-data-mode ::placeholder {
   color: rgba(217, 182, 83, 0.72);
+}
+
+.mock-record,
+.mock-record td {
+  border-color: rgba(212, 167, 44, 0.5) !important;
+  color: var(--mock-yellow-text) !important;
+  background:
+    linear-gradient(0deg, var(--mock-yellow-faint), var(--mock-yellow-faint)),
+    rgba(18, 24, 33, 0.72) !important;
+}
+
+.mock-record .person-name,
+.mock-record .identity-name,
+.mock-record .field-value,
+.mock-record .review-match-name,
+.mock-record dd,
+.mock-record .panel-title,
+.mock-record .text-input,
+.mock-record .text-area {
+  color: var(--mock-yellow-text) !important;
+}
+
+.mock-record .muted,
+.mock-record .section-kicker,
+.mock-record .field-label,
+.mock-record .timeline-date,
+.mock-record dt,
+.mock-record p {
+  color: var(--mock-yellow-muted) !important;
+}
+
+.mock-record .badge {
+  border-color: rgba(212, 167, 44, 0.5) !important;
+  color: var(--mock-yellow-text) !important;
+  background: var(--mock-yellow-soft) !important;
+}
+
+.mock-rail-record {
+  border: 1px solid rgba(212, 167, 44, 0.42);
+  border-radius: 8px;
+  padding: 10px;
 }
 
 .section-title {

@@ -25,7 +25,7 @@ export function MandatesPanel({ mandates }: { mandates: Mandate[] }) {
           </thead>
           <tbody>
             {mandates.map((mandate) => (
-              <tr key={mandate.id}>
+              <tr className={mandate.isMockData ? "mock-record" : undefined} key={mandate.id}>
                 <td>
                   <span className="person-name">{mandate.title}</span>
                   <div className="muted">{mandate.objective}</div>

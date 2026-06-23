@@ -34,6 +34,24 @@ type UntypedSupabase = {
   };
 };
 
+type MockableRecord = { id: string; isMockData?: boolean };
+
+const mockSeedIds = new Set<string>();
+for (const group of ["0", "2", "3", "4", "5", "6"]) {
+  for (const suffix of ["1", "2", "3", "4"]) {
+    mockSeedIds.add(`${group}0000000-0000-4000-8000-00000000000${suffix}`);
+  }
+}
+
+const mockPeople = new Set(people.flatMap((person) => [person.id, normalizeMockValue(person.displayName), normalizeMockValue(person.canonicalName)]));
+const mockRoles = new Set(roles.flatMap((role) => [role.id, mockRoleFingerprint(role.title, role.organizationName, role.sourceLabel)]));
+const mockInteractions = new Set(interactions.flatMap((interaction) => [interaction.id, normalizeMockValue(interaction.summary)]));
+const mockMandates = new Set(mandates.flatMap((mandate) => [mandate.id, normalizeMockValue(mandate.title)]));
+const mockOutreach = new Set(
+  outreachQueue.flatMap((item) => [item.id, mockOutreachFingerprint(item.personName, item.mandateTitle, item.reason)])
+);
+const mockReviewTasks = new Set(reviewTasks.flatMap((task) => [task.id, normalizeMockValue(task.title)]));
+
 export type AppData = {
   people: Person[];
   roles: Role[];
@@ -192,13 +210,13 @@ export async function getAppData(): Promise<AppData> {
 
 function getMockData(): AppData {
   return {
-    people,
-    roles,
-    interactions,
+    people: markMockRecords(people),
+    roles: markMockRecords(roles),
+    interactions: markMockRecords(interactions),
     businessCards: [],
-    mandates,
-    outreachQueue,
-    reviewTasks,
+    mandates: markMockRecords(mandates),
+    outreachQueue: markMockRecords(outreachQueue),
+    reviewTasks: markMockRecords(reviewTasks),
     workspaces: [{ id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" }],
     currentWorkspace: { id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" },
     source: "mock"
@@ -258,7 +276,8 @@ function mapPerson(row: {
     sectorTags: row.sector_tags,
     sourceCount: row.source_count,
     mandateMatches: row.mandate_matches,
-    reviewStatus: row.review_status
+    reviewStatus: row.review_status,
+    isMockData: isMockPerson(row.id, row.display_name, row.canonical_name)
   };
 }
 
@@ -282,7 +301,8 @@ function mapRole(row: {
     endDate: row.end_date ?? undefined,
     isCurrent: row.is_current,
     confidence: row.confidence,
-    sourceLabel: row.source_label
+    sourceLabel: row.source_label,
+    isMockData: isMockRole(row.id, row.title, row.organization_name, row.source_label)
   };
 }
 
@@ -306,7 +326,8 @@ function mapInteraction(row: {
     outcome: row.outcome ?? undefined,
     nextStep: row.next_step ?? undefined,
     confidence: row.confidence,
-    sourceLabel: row.source_label
+    sourceLabel: row.source_label,
+    isMockData: isMockInteraction(row.id, row.summary)
   };
 }
 
@@ -334,7 +355,8 @@ function mapBusinessCard(
     estimatedCardDate: row.estimated_card_date ?? undefined,
     sourceEvent: row.source_event ?? undefined,
     confidence: row.confidence,
-    reviewStatus: row.review_status
+    reviewStatus: row.review_status,
+    isMockData: isMockSeedId(row.id)
   };
 }
 
@@ -358,7 +380,8 @@ function mapMandate(row: {
     geography: row.geography,
     status: row.status,
     relevantContacts: row.relevant_contacts,
-    nextAction: row.next_action ?? "Define next action"
+    nextAction: row.next_action ?? "Define next action",
+    isMockData: isMockMandate(row.id, row.title)
   };
 }
 
@@ -382,7 +405,8 @@ function mapOutreachItem(row: {
     relationshipStrength: clampStrength(row.relationship_strength),
     riskLevel: row.risk_level,
     dueDate: row.due_date ?? "Unscheduled",
-    status: row.status
+    status: row.status,
+    isMockData: isMockOutreach(row.id, row.person_name, row.mandate_title, row.reason)
   };
 }
 
@@ -396,8 +420,53 @@ function mapReviewTask(row: {
     id: row.id,
     title: row.title,
     detail: row.detail,
-    status: row.status
+    status: row.status,
+    isMockData: isMockReviewTask(row.id, row.title)
   };
+}
+
+function markMockRecords<T extends MockableRecord>(records: T[]): T[] {
+  return records.map((record) => ({ ...record, isMockData: true }));
+}
+
+function isMockSeedId(id: string) {
+  return mockSeedIds.has(id) || id.startsWith("p-") || id.startsWith("r-") || id.startsWith("i-") || id.startsWith("m-") || id.startsWith("q-") || id.startsWith("t-");
+}
+
+function isMockPerson(id: string, displayName: string, canonicalName: string) {
+  return isMockSeedId(id) || mockPeople.has(normalizeMockValue(displayName)) || mockPeople.has(normalizeMockValue(canonicalName));
+}
+
+function isMockRole(id: string, title: string, organizationName: string, sourceLabel: string) {
+  return isMockSeedId(id) || mockRoles.has(mockRoleFingerprint(title, organizationName, sourceLabel));
+}
+
+function isMockInteraction(id: string, summary: string) {
+  return isMockSeedId(id) || mockInteractions.has(normalizeMockValue(summary));
+}
+
+function isMockMandate(id: string, title: string) {
+  return isMockSeedId(id) || mockMandates.has(normalizeMockValue(title));
+}
+
+function isMockOutreach(id: string, personName: string, mandateTitle: string, reason: string) {
+  return isMockSeedId(id) || mockOutreach.has(mockOutreachFingerprint(personName, mandateTitle, reason));
+}
+
+function isMockReviewTask(id: string, title: string) {
+  return isMockSeedId(id) || mockReviewTasks.has(normalizeMockValue(title));
+}
+
+function mockRoleFingerprint(title: string, organizationName: string, sourceLabel: string) {
+  return [title, organizationName, sourceLabel].map(normalizeMockValue).join("|");
+}
+
+function mockOutreachFingerprint(personName: string, mandateTitle: string, reason: string) {
+  return [personName, mandateTitle, reason].map(normalizeMockValue).join("|");
+}
+
+function normalizeMockValue(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function clampStrength(value: number): Person["relationshipStrength"] {

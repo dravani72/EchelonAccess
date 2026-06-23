@@ -2,7 +2,7 @@ import { Badge } from "@/components/badge";
 
 export function ReviewStation() {
   return (
-    <section className="panel" id="Business Cards">
+    <section className="panel mock-record" id="Business Cards">
       <div className="panel-header">
         <div>
           <h2 className="panel-title">Business Card Review Station</h2>

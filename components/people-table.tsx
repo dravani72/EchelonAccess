@@ -137,7 +137,7 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
         </div>
       </div>
       {editingPerson ? (
-        <div className="record-editor">
+        <div className={`record-editor ${editingPerson.isMockData ? "mock-record" : ""}`}>
           <div className="record-editor-grid">
             <label>
               <span className="field-label">Name</span>
@@ -218,7 +218,7 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
+              <tr className={row.original.isMockData ? "mock-record" : undefined} key={row.id}>
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                 ))}

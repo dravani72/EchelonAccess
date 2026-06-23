@@ -2,6 +2,7 @@ export type RelationshipStrength = 1 | 2 | 3 | 4 | 5;
 
 export type Person = {
   id: string;
+  isMockData?: boolean;
   canonicalName: string;
   displayName: string;
   honorific?: string;
@@ -23,6 +24,7 @@ export type Person = {
 
 export type Organization = {
   id: string;
+  isMockData?: boolean;
   name: string;
   normalizedName: string;
   type:
@@ -46,6 +48,7 @@ export type Organization = {
 
 export type Role = {
   id: string;
+  isMockData?: boolean;
   personId: string;
   organizationName: string;
   title: string;
@@ -58,6 +61,7 @@ export type Role = {
 
 export type Interaction = {
   id: string;
+  isMockData?: boolean;
   personId?: string;
   organizationId?: string;
   mandateId?: string;
@@ -81,6 +85,7 @@ export type Interaction = {
 
 export type Mandate = {
   id: string;
+  isMockData?: boolean;
   clientName: string;
   title: string;
   objective: string;
@@ -93,6 +98,7 @@ export type Mandate = {
 
 export type OutreachItem = {
   id: string;
+  isMockData?: boolean;
   personName: string;
   mandateTitle: string;
   reason: string;
@@ -112,6 +118,7 @@ export type OutreachItem = {
 
 export type ReviewTask = {
   id: string;
+  isMockData?: boolean;
   title: string;
   detail: string;
   status: "needs_review" | "suggested" | "stale" | "sensitive";
@@ -119,6 +126,7 @@ export type ReviewTask = {
 
 export type BusinessCard = {
   id: string;
+  isMockData?: boolean;
   personId?: string;
   imagePath?: string;
   imageUrl?: string;

@@ -25,7 +25,7 @@ export function OutreachQueue({ outreachQueue }: { outreachQueue: OutreachItem[]
           </thead>
           <tbody>
             {outreachQueue.map((item) => (
-              <tr key={item.id}>
+              <tr className={item.isMockData ? "mock-record" : undefined} key={item.id}>
                 <td>
                   <span className="person-name">{item.personName}</span>
                   <div className="muted">{item.channel.replace("_", " ")}</div>

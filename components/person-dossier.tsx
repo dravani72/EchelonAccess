@@ -52,21 +52,24 @@ export function PersonDossier({
       type: "Role",
       label: role.sourceLabel,
       detail: `${role.title} at ${role.organizationName}`,
-      confidence: role.confidence
+      confidence: role.confidence,
+      isMockData: role.isMockData
     })),
     ...personInteractions.map((interaction) => ({
       id: `interaction-${interaction.id}`,
       type: "Interaction",
       label: interaction.sourceLabel,
       detail: interaction.summary,
-      confidence: interaction.confidence
+      confidence: interaction.confidence,
+      isMockData: interaction.isMockData
     })),
     ...personCards.map((card) => ({
       id: `card-${card.id}`,
       type: "Business card",
       label: card.sourceEvent ?? "Uploaded artifact",
       detail: card.imagePath ?? card.rawOcrText ?? "Stored card evidence",
-      confidence: card.confidence
+      confidence: card.confidence,
+      isMockData: card.isMockData
     }))
   ];
 
@@ -120,7 +123,7 @@ function IdentityCard({ person }: { person: Person }) {
     .toUpperCase();
 
   return (
-    <aside className="identity-card">
+    <aside className={`identity-card ${person.isMockData ? "mock-record" : ""}`}>
       <div className="avatar">{initials}</div>
       <div className="identity-name">{person.displayName}</div>
       <div className="muted">{person.currentTitle}</div>
@@ -177,7 +180,7 @@ function TimelineTab({ interactions, compact = false }: { interactions: Interact
       {interactions.length ? (
         <div className="timeline">
           {interactions.map((interaction) => (
-            <div className="timeline-item" key={interaction.id}>
+            <div className={`timeline-item ${interaction.isMockData ? "mock-record" : ""}`} key={interaction.id}>
               <div className="timeline-date">{interaction.date}</div>
               <div>
                 <div className="person-name">{interaction.summary}</div>
@@ -214,7 +217,7 @@ function RolesTab({ roles, compact = false }: { roles: Role[]; compact?: boolean
           </thead>
           <tbody>
             {roles.map((role) => (
-              <tr key={role.id}>
+              <tr className={role.isMockData ? "mock-record" : undefined} key={role.id}>
                 <td>
                   <span className="person-name">{role.title}</span>
                   <div className="muted">{role.isCurrent ? "Current layer" : "Historical evidence"}</div>
@@ -246,7 +249,7 @@ function RelationshipsTab({ related }: { related: { person: Person; reasons: str
       {related.length ? (
         <div className="dossier-grid">
           {related.map(({ person, reasons }) => (
-            <div className="review-section" key={person.id}>
+            <div className={`review-section ${person.isMockData ? "mock-record" : ""}`} key={person.id}>
               <div className="person-name">{person.displayName}</div>
               <p className="section-kicker">{person.currentTitle}</p>
               <div className="badge-row">
@@ -273,7 +276,7 @@ function CardsTab({ cards }: { cards: BusinessCard[] }) {
       {cards.length ? (
         <div className="dossier-grid">
           {cards.map((card) => (
-            <div className="review-section" key={card.id}>
+            <div className={`review-section ${card.isMockData ? "mock-record" : ""}`} key={card.id}>
               <div className="card-preview">
                 {card.imageUrl ? <img alt="Business card artifact" className="artifact-image" src={card.imageUrl} /> : "Stored artifact"}
               </div>
@@ -301,7 +304,11 @@ function CardsTab({ cards }: { cards: BusinessCard[] }) {
   );
 }
 
-function SourcesTab({ rows }: { rows: { id: string; type: string; label: string; detail: string; confidence: number }[] }) {
+function SourcesTab({
+  rows
+}: {
+  rows: { id: string; type: string; label: string; detail: string; confidence: number; isMockData?: boolean }[];
+}) {
   return (
     <div>
       <h3 className="panel-title">Sources</h3>
@@ -317,7 +324,7 @@ function SourcesTab({ rows }: { rows: { id: string; type: string; label: string;
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id}>
+              <tr className={row.isMockData ? "mock-record" : undefined} key={row.id}>
                 <td>{row.type}</td>
                 <td>{row.label}</td>
                 <td>{row.detail}</td>
