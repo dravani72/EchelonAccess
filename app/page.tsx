@@ -29,8 +29,8 @@ export default async function Home() {
             </section>
 
             <Metrics data={data} />
-            <RelationshipIntake />
-            <PeopleTable people={data.people} />
+            <RelationshipIntake source={data.source} workspaceId={data.currentWorkspace?.id} />
+            <PeopleTable people={data.people} source={data.source} />
             <PersonDossier people={data.people} roles={data.roles} interactions={data.interactions} />
             <div className="grid-two">
               <ReviewStation />

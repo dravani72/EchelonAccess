@@ -46,18 +46,45 @@ export type Database = {
           warmth_status: "cold" | "weak" | "known" | "warm" | "direct";
           current_title: string | null;
           current_organization: string | null;
+          avatar_url: string | null;
           last_interaction: string | null;
           geography: string | null;
           sector_tags: string[];
           source_count: number;
           mandate_matches: number;
           review_status: "verified" | "needs_review" | "possible_duplicate";
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["people"]["Row"]> & {
           canonical_name: string;
           display_name: string;
         };
         Update: Partial<Database["public"]["Tables"]["people"]["Row"]>;
+      };
+      business_cards: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          person_id: string | null;
+          organization_id: string | null;
+          image_url: string | null;
+          raw_ocr_text: string | null;
+          parsed_fields: Json;
+          scan_date: string;
+          estimated_card_date: string | null;
+          source_event: string | null;
+          confidence: number;
+          review_status: "unreviewed" | "reviewed" | "needs_attention" | "merged";
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["business_cards"]["Row"]> & {
+          workspace_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["business_cards"]["Row"]>;
       };
       roles: {
         Row: {

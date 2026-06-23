@@ -12,6 +12,7 @@ export type Person = {
   warmthStatus: "cold" | "weak" | "known" | "warm" | "direct";
   currentTitle: string;
   currentOrganization: string;
+  avatarUrl?: string;
   lastInteraction: string;
   geography: string;
   sectorTags: string[];

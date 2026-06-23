@@ -80,6 +80,7 @@ create table if not exists people (
   warmth_status text not null default 'cold' check (warmth_status in ('cold','weak','known','warm','direct')),
   current_title text,
   current_organization text,
+  avatar_url text,
   last_interaction date,
   geography text,
   sector_tags text[] not null default '{}',
@@ -91,6 +92,8 @@ create table if not exists people (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table people add column if not exists avatar_url text;
 
 create table if not exists roles (
   id uuid primary key default gen_random_uuid(),
@@ -225,6 +228,30 @@ alter table outreach_queue enable row level security;
 alter table review_tasks enable row level security;
 alter table sync_events enable row level security;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'relationship-artifacts',
+  'relationship-artifacts',
+  false,
+  10485760,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+    'application/pdf',
+    'text/vcard',
+    'text/x-vcard',
+    'text/csv',
+    'application/csv'
+  ]
+)
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
 grant usage on schema public to authenticated;
 revoke execute on function is_workspace_member(uuid) from public, anon;
 revoke execute on function can_write_workspace(uuid) from public, anon;
@@ -267,6 +294,10 @@ drop policy if exists "members read review tasks" on review_tasks;
 drop policy if exists "writers manage review tasks" on review_tasks;
 drop policy if exists "members read sync events" on sync_events;
 drop policy if exists "writers append sync events" on sync_events;
+drop policy if exists "members read relationship artifacts" on storage.objects;
+drop policy if exists "writers upload relationship artifacts" on storage.objects;
+drop policy if exists "writers update relationship artifacts" on storage.objects;
+drop policy if exists "writers delete relationship artifacts" on storage.objects;
 
 create policy "members can read workspaces" on workspaces for select to authenticated using (is_workspace_member(id));
 create policy "owners can update workspaces" on workspaces for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
@@ -302,3 +333,26 @@ create policy "writers manage review tasks" on review_tasks for all to authentic
 
 create policy "members read sync events" on sync_events for select to authenticated using (is_workspace_member(workspace_id));
 create policy "writers append sync events" on sync_events for insert to authenticated with check (can_write_workspace(workspace_id) and user_id = auth.uid());
+
+create policy "members read relationship artifacts" on storage.objects for select to authenticated using (
+  bucket_id = 'relationship-artifacts'
+  and is_workspace_member(((storage.foldername(name))[1])::uuid)
+);
+
+create policy "writers upload relationship artifacts" on storage.objects for insert to authenticated with check (
+  bucket_id = 'relationship-artifacts'
+  and can_write_workspace(((storage.foldername(name))[1])::uuid)
+);
+
+create policy "writers update relationship artifacts" on storage.objects for update to authenticated using (
+  bucket_id = 'relationship-artifacts'
+  and can_write_workspace(((storage.foldername(name))[1])::uuid)
+) with check (
+  bucket_id = 'relationship-artifacts'
+  and can_write_workspace(((storage.foldername(name))[1])::uuid)
+);
+
+create policy "writers delete relationship artifacts" on storage.objects for delete to authenticated using (
+  bucket_id = 'relationship-artifacts'
+  and can_write_workspace(((storage.foldername(name))[1])::uuid)
+);

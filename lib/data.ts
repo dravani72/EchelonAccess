@@ -212,6 +212,7 @@ function mapPerson(row: {
   warmth_status: Person["warmthStatus"];
   current_title: string | null;
   current_organization: string | null;
+  avatar_url: string | null;
   last_interaction: string | null;
   geography: string | null;
   sector_tags: string[];
@@ -231,6 +232,7 @@ function mapPerson(row: {
     warmthStatus: row.warmth_status,
     currentTitle: row.current_title ?? "Unknown role",
     currentOrganization: row.current_organization ?? "Unknown organization",
+    avatarUrl: row.avatar_url ?? undefined,
     lastInteraction: row.last_interaction ?? "No interaction",
     geography: row.geography ?? "Unknown",
     sectorTags: row.sector_tags,
