@@ -15,23 +15,24 @@ import {
   SquarePen,
   Users
 } from "lucide-react";
+import { withBasePath } from "@/lib/base-path";
 import { OfflineStatus } from "@/components/offline-status";
 import { SignOutButton } from "@/components/sign-out-button";
 
 const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, active: true },
-  { label: "Add Relationship", icon: SquarePen },
-  { label: "People", icon: Users },
-  { label: "Organizations", icon: Building2 },
-  { label: "Business Cards", icon: FileStack },
-  { label: "Mandates", icon: GitBranch },
-  { label: "Relationship Graph", icon: Network },
-  { label: "Outreach Queue", icon: ContactRound },
-  { label: "Timeline", icon: Clock3 },
-  { label: "Settings", icon: Settings }
+  { id: "dashboard", label: "Network Desk", icon: LayoutDashboard, href: "/" },
+  { id: "add", label: "Add Relationship", icon: SquarePen, href: "/relationships/new" },
+  { id: "people", label: "People", icon: Users, href: "/#people" },
+  { id: "organizations", label: "Organizations", icon: Building2, href: "/#organizations" },
+  { id: "cards", label: "Business Cards", icon: FileStack, href: "/#cards" },
+  { id: "mandates", label: "Mandates", icon: GitBranch, href: "/#mandates" },
+  { id: "graph", label: "Relationship Graph", icon: Network, href: "/#graph" },
+  { id: "outreach", label: "Outreach Queue", icon: ContactRound, href: "/#outreach" },
+  { id: "timeline", label: "Timeline", icon: Clock3, href: "/#timeline" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/#settings" }
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ activeSection = "dashboard", children }: { activeSection?: string; children: React.ReactNode }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -47,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav className="nav" aria-label="Primary">
           {navItems.map((item) => (
-            <a className={`nav-item ${item.active ? "active" : ""}`} href={`#${item.label}`} key={item.label}>
+            <a className={`nav-item ${activeSection === item.id ? "active" : ""}`} href={withBasePath(item.href)} key={item.label}>
               <item.icon size={17} />
               <span>{item.label}</span>
             </a>
@@ -74,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <OfflineStatus />
           <SignOutButton />
-          <a className="button primary" href="#Add Relationship">
+          <a className="button primary" href={withBasePath("/relationships/new")}>
             <Plus size={16} />
             Add
           </a>
