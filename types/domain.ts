@@ -117,6 +117,19 @@ export type ReviewTask = {
   status: "needs_review" | "suggested" | "stale" | "sensitive";
 };
 
+export type BusinessCard = {
+  id: string;
+  personId?: string;
+  imagePath?: string;
+  imageUrl?: string;
+  rawOcrText?: string;
+  scanDate: string;
+  estimatedCardDate?: string;
+  sourceEvent?: string;
+  confidence: number;
+  reviewStatus: "unreviewed" | "reviewed" | "needs_attention" | "merged";
+};
+
 export type Workspace = {
   id: string;
   name: string;

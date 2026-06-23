@@ -1,7 +1,7 @@
 import { getSupabaseConfigStatus } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { interactions, mandates, outreachQueue, people, reviewTasks, roles } from "@/lib/mock-data";
-import type { Interaction, Mandate, OutreachItem, Person, ReviewTask, Role, Workspace } from "@/types/domain";
+import type { BusinessCard, Interaction, Mandate, OutreachItem, Person, ReviewTask, Role, Workspace } from "@/types/domain";
 
 type SupabaseResult<T = Record<string, unknown>> = Promise<{ data: T[] | null; error: { message: string } | null }>;
 type SupabaseSingleResult<T = Record<string, unknown>> = Promise<{ data: T | null; error: { message: string } | null }>;
@@ -27,12 +27,18 @@ type UntypedSupabase = {
       };
     };
   };
+  storage: {
+    from: (bucket: string) => {
+      createSignedUrl: (path: string, expiresIn: number) => Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }>;
+    };
+  };
 };
 
 export type AppData = {
   people: Person[];
   roles: Role[];
   interactions: Interaction[];
+  businessCards: BusinessCard[];
   mandates: Mandate[];
   outreachQueue: OutreachItem[];
   reviewTasks: ReviewTask[];
@@ -128,10 +134,11 @@ export async function getAppData(): Promise<AppData> {
       return getEmptySupabaseData("Supabase returned no workspace for this user.");
     }
 
-    const [peopleResult, rolesResult, interactionsResult, mandatesResult, outreachResult, reviewResult] = await Promise.all([
+    const [peopleResult, rolesResult, interactionsResult, businessCardsResult, mandatesResult, outreachResult, reviewResult] = await Promise.all([
       supabase.from("people").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false }),
       supabase.from("roles").select("*").eq("workspace_id", currentWorkspace.id).order("is_current", { ascending: false }),
       supabase.from("interactions").select("*").eq("workspace_id", currentWorkspace.id).order("interaction_date", { ascending: false }),
+      supabase.from("business_cards").select("*").eq("workspace_id", currentWorkspace.id).order("scan_date", { ascending: false }),
       supabase.from("mandates").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false }),
       supabase.from("outreach_queue").select("*").eq("workspace_id", currentWorkspace.id).order("due_date", { ascending: true }),
       supabase.from("review_tasks").select("*").eq("workspace_id", currentWorkspace.id).order("updated_at", { ascending: false })
@@ -141,6 +148,7 @@ export async function getAppData(): Promise<AppData> {
       ["people", peopleResult.error],
       ["roles", rolesResult.error],
       ["interactions", interactionsResult.error],
+      ["business_cards", businessCardsResult.error],
       ["mandates", mandatesResult.error],
       ["outreach_queue", outreachResult.error],
       ["review_tasks", reviewResult.error]
@@ -152,10 +160,20 @@ export async function getAppData(): Promise<AppData> {
       );
     }
 
+    const signedCardUrls = await signStoragePaths(
+      supabase,
+      (businessCardsResult.data ?? [])
+        .map((card) => (card as Parameters<typeof mapBusinessCard>[0]).image_url)
+        .filter(Boolean) as string[]
+    );
+
     return {
       people: ((peopleResult.data ?? []) as Parameters<typeof mapPerson>[0][]).map(mapPerson),
       roles: ((rolesResult.data ?? []) as Parameters<typeof mapRole>[0][]).map(mapRole),
       interactions: ((interactionsResult.data ?? []) as Parameters<typeof mapInteraction>[0][]).map(mapInteraction),
+      businessCards: ((businessCardsResult.data ?? []) as Parameters<typeof mapBusinessCard>[0][]).map((card) =>
+        mapBusinessCard(card, card.image_url ? signedCardUrls.get(card.image_url) : undefined)
+      ),
       mandates: ((mandatesResult.data ?? []) as Parameters<typeof mapMandate>[0][]).map(mapMandate),
       outreachQueue: ((outreachResult.data ?? []) as Parameters<typeof mapOutreachItem>[0][]).map(mapOutreachItem),
       reviewTasks: ((reviewResult.data ?? []) as Parameters<typeof mapReviewTask>[0][]).map(mapReviewTask),
@@ -177,6 +195,7 @@ function getMockData(): AppData {
     people,
     roles,
     interactions,
+    businessCards: [],
     mandates,
     outreachQueue,
     reviewTasks,
@@ -191,6 +210,7 @@ function getEmptySupabaseData(diagnostic: string): AppData {
     people: [],
     roles: [],
     interactions: [],
+    businessCards: [],
     mandates: [],
     outreachQueue: [],
     reviewTasks: [],
@@ -290,6 +310,34 @@ function mapInteraction(row: {
   };
 }
 
+function mapBusinessCard(
+  row: {
+    id: string;
+    person_id: string | null;
+    image_url: string | null;
+    raw_ocr_text: string | null;
+    scan_date: string;
+    estimated_card_date: string | null;
+    source_event: string | null;
+    confidence: number;
+    review_status: BusinessCard["reviewStatus"];
+  },
+  signedUrl?: string
+): BusinessCard {
+  return {
+    id: row.id,
+    personId: row.person_id ?? undefined,
+    imagePath: row.image_url ?? undefined,
+    imageUrl: signedUrl,
+    rawOcrText: row.raw_ocr_text ?? undefined,
+    scanDate: row.scan_date,
+    estimatedCardDate: row.estimated_card_date ?? undefined,
+    sourceEvent: row.source_event ?? undefined,
+    confidence: row.confidence,
+    reviewStatus: row.review_status
+  };
+}
+
 function mapMandate(row: {
   id: string;
   client_name: string;
@@ -356,4 +404,17 @@ function clampStrength(value: number): Person["relationshipStrength"] {
   if (value >= 5) return 5;
   if (value <= 1) return 1;
   return value as Person["relationshipStrength"];
+}
+
+async function signStoragePaths(supabase: UntypedSupabase, paths: string[]) {
+  const signedUrls = new Map<string, string>();
+  await Promise.all(
+    Array.from(new Set(paths)).map(async (path) => {
+      const { data, error } = await supabase.storage.from("relationship-artifacts").createSignedUrl(path, 60 * 30);
+      if (!error && data?.signedUrl) {
+        signedUrls.set(path, data.signedUrl);
+      }
+    })
+  );
+  return signedUrls;
 }
