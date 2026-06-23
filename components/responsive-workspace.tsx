@@ -50,6 +50,18 @@ type NetworkIntelligence = {
   mandateContexts: MandateContext[];
   organizationOverlaps: { label: string; people: Person[] }[];
 };
+type TokenItem = ReturnType<typeof normalizeList>[number];
+type PersonSignal = {
+  person: Person;
+  tokens: Set<string>;
+  sectors: TokenItem[];
+  geographies: TokenItem[];
+  matchedMandates: Mandate[];
+};
+type MandateSignal = {
+  mandate: Mandate;
+  tokens: Set<string>;
+};
 
 const views: { id: WorkspaceView; label: string }[] = [
   { id: "network", label: "Network" },
@@ -324,12 +336,14 @@ function PanelLoading({ label }: { label: string }) {
 function buildNetworkIntelligence(data: AppData): NetworkIntelligence {
   const people = data.people.slice(0, 400);
   const mandates = data.mandates.slice(0, 40);
+  const mandateSignals = buildMandateSignals(mandates);
+  const personSignals = buildPersonSignals(people, mandateSignals);
   const clusters = buildClusters(people, mandates);
-  const mandateContexts = mandates
-    .map((mandate) => ({
-      mandate,
-      people: people
-        .map((person) => ({ person, score: scorePersonForMandate(person, mandate) }))
+  const mandateContexts = mandateSignals
+    .map((mandateSignal) => ({
+      mandate: mandateSignal.mandate,
+      people: personSignals
+        .map((personSignal) => ({ person: personSignal.person, score: countTokenOverlap(personSignal.tokens, mandateSignal.tokens) }))
         .filter((match) => match.score > 0)
         .sort((a, b) => b.score - a.score)
         .map((match) => match.person)
@@ -339,10 +353,57 @@ function buildNetworkIntelligence(data: AppData): NetworkIntelligence {
 
   return {
     clusters,
-    introPaths: buildIntroPaths(people, mandates),
+    introPaths: buildIntroPaths(personSignals),
     mandateContexts,
     organizationOverlaps: buildOrganizationOverlaps(people, data.roles)
   };
+}
+
+function buildMandateSignals(mandates: Mandate[]): MandateSignal[] {
+  return mandates.map((mandate) => ({
+    mandate,
+    tokens: new Set(
+      normalizeList([
+        mandate.title,
+        mandate.sector,
+        ...(mandate.geography ?? []),
+        ...(mandate.tags ?? []),
+        ...(mandate.desiredCounterparties ?? []),
+        ...(mandate.strategicPartners ?? []),
+        ...(mandate.decisionMakers ?? []),
+        ...(mandate.gatekeepers ?? []),
+        ...(mandate.influencers ?? [])
+      ]).map((item) => item.token)
+    )
+  }));
+}
+
+function buildPersonSignals(people: Person[], mandateSignals: MandateSignal[]): PersonSignal[] {
+  return people.map((person) => {
+    const sectors = normalizeList([...person.sectorTags, ...(person.relevantSectors ?? [])]);
+    const geographies = normalizeList([person.geography, ...(person.relevantGeographies ?? [])]);
+    const tokens = new Set(
+      normalizeList([
+        ...person.sectorTags,
+        person.geography,
+        person.currentOrganization,
+        ...(person.relevantMandates ?? []),
+        ...(person.relevantGeographies ?? []),
+        ...(person.relevantSectors ?? []),
+        ...(person.relevantInstitutions ?? [])
+      ]).map((item) => item.token)
+    );
+
+    return {
+      person,
+      tokens,
+      sectors,
+      geographies,
+      matchedMandates: mandateSignals
+        .filter((mandateSignal) => countTokenOverlap(tokens, mandateSignal.tokens) > 0)
+        .map((mandateSignal) => mandateSignal.mandate)
+    };
+  });
 }
 
 function buildClusters(people: Person[], mandates: Mandate[]) {
@@ -391,19 +452,18 @@ function addClusterValues(buckets: Map<string, SharedCluster>, kind: SharedClust
   }
 }
 
-function buildIntroPaths(people: Person[], mandates: Mandate[]) {
+function buildIntroPaths(people: PersonSignal[]) {
   const paths: IntroPath[] = [];
 
   for (let leftIndex = 0; leftIndex < people.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < people.length; rightIndex += 1) {
-      const left = people[leftIndex];
-      const right = people[rightIndex];
-      const sharedSectors = intersect(normalizeList(left.sectorTags), normalizeList(right.sectorTags));
-      const sharedGeographies = intersect(
-        normalizeList([left.geography, ...(left.relevantGeographies ?? [])]),
-        normalizeList([right.geography, ...(right.relevantGeographies ?? [])])
-      );
-      const sharedMandates = mandates.filter((mandate) => scorePersonForMandate(left, mandate) > 0 && scorePersonForMandate(right, mandate) > 0);
+      const leftSignal = people[leftIndex];
+      const rightSignal = people[rightIndex];
+      const left = leftSignal.person;
+      const right = rightSignal.person;
+      const sharedSectors = intersect(leftSignal.sectors, rightSignal.sectors);
+      const sharedGeographies = intersect(leftSignal.geographies, rightSignal.geographies);
+      const sharedMandates = intersectMandates(leftSignal.matchedMandates, rightSignal.matchedMandates);
       const score =
         sharedMandates.length * 3 +
         sharedSectors.length * 2 +
@@ -449,33 +509,22 @@ function addOrganizationOverlap(buckets: Map<string, { label: string; people: Pe
   buckets.set(key, overlap);
 }
 
-function scorePersonForMandate(person: Person, mandate: Mandate) {
-  const personTokens = normalizeList([
-    ...person.sectorTags,
-    person.geography,
-    ...(person.relevantMandates ?? []),
-    ...(person.relevantGeographies ?? []),
-    ...(person.relevantSectors ?? []),
-    ...(person.relevantInstitutions ?? [])
-  ]);
-  const mandateTokens = normalizeList([
-    mandate.title,
-    mandate.sector,
-    ...(mandate.geography ?? []),
-    ...(mandate.tags ?? []),
-    ...(mandate.desiredCounterparties ?? []),
-    ...(mandate.strategicPartners ?? []),
-    ...(mandate.decisionMakers ?? []),
-    ...(mandate.gatekeepers ?? []),
-    ...(mandate.influencers ?? [])
-  ]);
-
-  return intersect(personTokens, mandateTokens).length;
-}
-
-function intersect(left: ReturnType<typeof normalizeList>, right: ReturnType<typeof normalizeList>) {
+function intersect(left: TokenItem[], right: TokenItem[]) {
   const rightTokens = new Set(right.map((item) => item.token));
   return left.filter((item) => rightTokens.has(item.token)).map((item) => item.label);
+}
+
+function intersectMandates(left: Mandate[], right: Mandate[]) {
+  const rightIds = new Set(right.map((mandate) => mandate.id));
+  return left.filter((mandate) => rightIds.has(mandate.id));
+}
+
+function countTokenOverlap(left: Set<string>, right: Set<string>) {
+  let count = 0;
+  left.forEach((token) => {
+    if (right.has(token)) count += 1;
+  });
+  return count;
 }
 
 function normalizeList(values: Array<string | undefined>) {
