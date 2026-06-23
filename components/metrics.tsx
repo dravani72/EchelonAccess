@@ -1,32 +1,39 @@
 import type { AppData } from "@/lib/data";
 
 export function Metrics({ data }: { data: AppData }) {
-  const staleHighValue = data.people.filter((person) => person.relationshipStrength >= 3 && person.warmthStatus !== "direct").length;
+  const bridgeableContacts = data.people.filter((person) => person.relationshipStrength >= 3 && person.mandateMatches > 0).length;
   const activeMandates = data.mandates.filter((mandate) => mandate.status === "active").length;
   const awaitingOutreach = data.outreachQueue.filter(
     (item) => item.status === "draft_ready" || item.status === "awaiting_approval"
   ).length;
+  const overlapSignals = data.people.filter(
+    (person) =>
+      person.sectorTags.length > 1 ||
+      Boolean(person.relevantMandates?.length) ||
+      Boolean(person.relevantInstitutions?.length) ||
+      Boolean(person.keyRelationships)
+  ).length;
 
   const metrics = [
     {
-      label: "Unreviewed intelligence",
-      value: data.reviewTasks.length,
-      context: "cards, duplicates, and role changes"
+      label: "Overlap signals",
+      value: overlapSignals,
+      context: "interests, institutions, and mandate links"
     },
     {
       label: "Active mandates",
       value: activeMandates,
-      context: "deal objectives with current paths"
+      context: "live reasons to bring people together"
     },
     {
-      label: "Warm stale contacts",
-      value: staleHighValue,
-      context: "relationship value waiting on pretext"
+      label: "Bridgeable contacts",
+      value: bridgeableContacts,
+      context: "warm enough and tied to an ask"
     },
     {
-      label: "Outreach awaiting action",
+      label: "Introductions queued",
       value: awaitingOutreach,
-      context: "drafts or approvals due this week"
+      context: "drafts or approvals ready for action"
     }
   ];
 
