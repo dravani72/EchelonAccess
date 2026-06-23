@@ -21,7 +21,17 @@ export function PersonDossier({
 }) {
   const [activeTab, setActiveTab] = useState<DossierTab>("Overview");
   const [selectedPersonId, setSelectedPersonId] = useState(people[0]?.id ?? "");
-  const person = people.find((item) => item.id === selectedPersonId) ?? people[0];
+  const peopleById = useMemo(() => new Map(people.map((item) => [item.id, item])), [people]);
+  const rolesByPersonId = useMemo(() => groupByPersonId(roles), [roles]);
+  const interactionsByPersonId = useMemo(() => groupByPersonId(interactions), [interactions]);
+  const cardsByPersonId = useMemo(() => groupByPersonId(businessCards), [businessCards]);
+  const person = peopleById.get(selectedPersonId) ?? people[0];
+  const personRoles = useMemo(() => (person ? rolesByPersonId.get(person.id) ?? [] : []), [person, rolesByPersonId]);
+  const personInteractions = useMemo(
+    () => (person ? interactionsByPersonId.get(person.id) ?? [] : []),
+    [interactionsByPersonId, person]
+  );
+  const personCards = useMemo(() => (person ? cardsByPersonId.get(person.id) ?? [] : []), [cardsByPersonId, person]);
 
   const related = useMemo(() => {
     if (!person) return [];
@@ -38,40 +48,39 @@ export function PersonDossier({
       .filter((candidate) => candidate.reasons.length)
       .slice(0, 6);
   }, [people, person]);
+  const sourceRows = useMemo(
+    () => [
+      ...personRoles.map((role) => ({
+        id: `role-${role.id}`,
+        type: "Role",
+        label: role.sourceLabel,
+        detail: `${role.title} at ${role.organizationName}`,
+        confidence: role.confidence,
+        isMockData: role.isMockData
+      })),
+      ...personInteractions.map((interaction) => ({
+        id: `interaction-${interaction.id}`,
+        type: "Interaction",
+        label: interaction.sourceLabel,
+        detail: interaction.summary,
+        confidence: interaction.confidence,
+        isMockData: interaction.isMockData
+      })),
+      ...personCards.map((card) => ({
+        id: `card-${card.id}`,
+        type: "Business card",
+        label: card.sourceEvent ?? "Uploaded artifact",
+        detail: card.imagePath ?? card.rawOcrText ?? "Stored card evidence",
+        confidence: card.confidence,
+        isMockData: card.isMockData
+      }))
+    ],
+    [personCards, personInteractions, personRoles]
+  );
 
   if (!person) {
     return null;
   }
-
-  const personRoles = roles.filter((role) => role.personId === person.id);
-  const personInteractions = interactions.filter((interaction) => interaction.personId === person.id);
-  const personCards = businessCards.filter((card) => card.personId === person.id);
-  const sourceRows = [
-    ...personRoles.map((role) => ({
-      id: `role-${role.id}`,
-      type: "Role",
-      label: role.sourceLabel,
-      detail: `${role.title} at ${role.organizationName}`,
-      confidence: role.confidence,
-      isMockData: role.isMockData
-    })),
-    ...personInteractions.map((interaction) => ({
-      id: `interaction-${interaction.id}`,
-      type: "Interaction",
-      label: interaction.sourceLabel,
-      detail: interaction.summary,
-      confidence: interaction.confidence,
-      isMockData: interaction.isMockData
-    })),
-    ...personCards.map((card) => ({
-      id: `card-${card.id}`,
-      type: "Business card",
-      label: card.sourceEvent ?? "Uploaded artifact",
-      detail: card.imagePath ?? card.rawOcrText ?? "Stored card evidence",
-      confidence: card.confidence,
-      isMockData: card.isMockData
-    }))
-  ];
 
   return (
     <section className="panel" id="People">
@@ -334,7 +343,11 @@ function CardsTab({ cards }: { cards: BusinessCard[] }) {
           {cards.map((card) => (
             <div className={`review-section ${card.isMockData ? "mock-record" : ""}`} key={card.id}>
               <div className="card-preview">
-                {card.imageUrl ? <img alt="Business card artifact" className="artifact-image" src={card.imageUrl} /> : "Stored artifact"}
+                {card.imageUrl ? (
+                  <img alt="Business card artifact" className="artifact-image" decoding="async" loading="lazy" src={card.imageUrl} />
+                ) : (
+                  "Stored artifact"
+                )}
               </div>
               <div className="field-list">
                 <div>
@@ -400,4 +413,20 @@ function SourcesTab({
 
 function EmptyState({ text }: { text: string }) {
   return <div className="empty-state">{text}</div>;
+}
+
+function groupByPersonId<T extends { personId?: string }>(records: T[]) {
+  const grouped = new Map<string, T[]>();
+
+  records.forEach((record) => {
+    if (!record.personId) return;
+    const existing = grouped.get(record.personId);
+    if (existing) {
+      existing.push(record);
+      return;
+    }
+    grouped.set(record.personId, [record]);
+  });
+
+  return grouped;
 }
