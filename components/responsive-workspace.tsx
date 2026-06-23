@@ -46,9 +46,9 @@ type MandateContext = {
 };
 type NetworkIntelligence = {
   clusters: SharedCluster[];
-  introPaths: IntroPath[];
   mandateContexts: MandateContext[];
   organizationOverlaps: { label: string; people: Person[] }[];
+  personSignals: PersonSignal[];
 };
 type TokenItem = ReturnType<typeof normalizeList>[number];
 type PersonSignal = {
@@ -76,14 +76,17 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
   const [activeView, setActiveView] = useState<WorkspaceView>("network");
   const [isPending, startTransition] = useTransition();
   const intelligence = useMemo(() => buildNetworkIntelligence(data), [data]);
+  const introPaths = useMemo(
+    () => (activeView === "opportunities" ? buildIntroPaths(intelligence.personSignals.slice(0, 180)) : []),
+    [activeView, intelligence.personSignals]
+  );
   const counts = useMemo(
     () => ({
       people: data.people.length,
       mandates: data.mandates.length,
-      introPaths: intelligence.introPaths.length,
       clusters: intelligence.clusters.length
     }),
-    [data.mandates.length, data.people.length, intelligence.clusters.length, intelligence.introPaths.length]
+    [data.mandates.length, data.people.length, intelligence.clusters.length]
   );
 
   function openView(view: WorkspaceView) {
@@ -100,7 +103,7 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
         <div className="badge-row">
           <Badge tone="blue">{counts.people} people</Badge>
           <Badge tone="purple">{counts.mandates} mandates</Badge>
-          <Badge tone="green">{counts.introPaths} intro paths</Badge>
+          <Badge tone="green">Intro paths on demand</Badge>
           <a className="button primary" href={withBasePath("/relationships/new")}>
             Define relationship
           </a>
@@ -124,7 +127,7 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
 
       <div className="panel-body" role="tabpanel">
         {activeView === "network" ? <NetworkOverview data={data} intelligence={intelligence} /> : null}
-        {activeView === "opportunities" ? <OpportunityBoard introPaths={intelligence.introPaths} /> : null}
+        {activeView === "opportunities" ? <OpportunityBoard introPaths={introPaths} /> : null}
         {activeView === "people" ? (
           <PeopleTable
             mandates={data.mandates}
@@ -200,16 +203,11 @@ function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: 
           <div className="review-section-header">
             <div>
               <div className="field-label">Near-Term Introduction Paths</div>
-              <div className="field-value">Pairs with enough overlap to justify middleman action.</div>
+              <div className="field-value">Pairwise path scoring is loaded only when requested.</div>
             </div>
-            <Badge tone="blue">{intelligence.introPaths.length}</Badge>
+            <Badge tone="blue">{intelligence.personSignals.length} signals</Badge>
           </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            {intelligence.introPaths.slice(0, 4).map((path) => (
-              <IntroPathRow key={`${path.left.id}-${path.right.id}`} path={path} />
-            ))}
-            {!intelligence.introPaths.length ? <div className="empty-state">No introduction paths detected yet.</div> : null}
-          </div>
+          <div className="empty-state">Open Intro Paths to score relationship pairs without slowing the Network Desk.</div>
         </div>
 
         <div className="review-section">
@@ -353,9 +351,9 @@ function buildNetworkIntelligence(data: AppData): NetworkIntelligence {
 
   return {
     clusters,
-    introPaths: buildIntroPaths(personSignals),
     mandateContexts,
-    organizationOverlaps: buildOrganizationOverlaps(people, data.roles)
+    organizationOverlaps: buildOrganizationOverlaps(people, data.roles),
+    personSignals
   };
 }
 
