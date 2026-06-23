@@ -1,4 +1,5 @@
 import { Badge } from "@/components/badge";
+import { withBasePath } from "@/lib/base-path";
 import { formatStatus } from "@/lib/format";
 import type { Mandate } from "@/types/domain";
 
@@ -10,6 +11,9 @@ export function MandatesPanel({ mandates }: { mandates: Mandate[] }) {
           <h2 className="panel-title">Mandate Definition</h2>
           <div className="section-kicker">Scope, boundaries, counterparties, authority path, and disqualification rules.</div>
         </div>
+        <a className="button primary" href={withBasePath("/mandates/new")}>
+          Define mandate
+        </a>
       </div>
       <div className="panel-body" style={{ display: "grid", gap: 14 }}>
         {mandates.map((mandate) => (
