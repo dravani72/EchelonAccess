@@ -234,6 +234,9 @@ a {
 
 .mock-data-mode {
   --mock-yellow: #d4a72c;
+  --mock-yellow-text: #f2c34c;
+  --mock-yellow-muted: #d9b653;
+  --mock-yellow-subtle: #b89638;
   --mock-yellow-soft: rgba(212, 167, 44, 0.2);
   --mock-yellow-faint: rgba(212, 167, 44, 0.08);
 }
@@ -282,7 +285,47 @@ a {
 
 .mock-data-mode .person-name,
 .mock-data-mode .metric-value {
-  color: #f2c34c;
+  color: var(--mock-yellow-text);
+}
+
+.mock-data-mode .section-title,
+.mock-data-mode .panel-title,
+.mock-data-mode .rail-card h3,
+.mock-data-mode .identity-name,
+.mock-data-mode .field-value,
+.mock-data-mode .table td,
+.mock-data-mode .text-input,
+.mock-data-mode .text-area,
+.mock-data-mode .tab.active {
+  color: var(--mock-yellow-text);
+}
+
+.mock-data-mode .section-kicker,
+.mock-data-mode .metric-label,
+.mock-data-mode .metric-context,
+.mock-data-mode .muted,
+.mock-data-mode .rail-card p,
+.mock-data-mode .table th,
+.mock-data-mode .tab,
+.mock-data-mode .empty-state,
+.mock-data-mode .card-preview {
+  color: var(--mock-yellow-muted);
+}
+
+.mock-data-mode .field-label,
+.mock-data-mode .timeline-date,
+.mock-data-mode .lock-hint {
+  color: var(--mock-yellow-subtle);
+}
+
+.mock-data-mode .badge {
+  border-color: rgba(212, 167, 44, 0.5);
+  color: var(--mock-yellow-text);
+  background: var(--mock-yellow-soft);
+}
+
+.mock-data-mode ::placeholder {
+  color: rgba(217, 182, 83, 0.72);
 }
 
 .section-title {
