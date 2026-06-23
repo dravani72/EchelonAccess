@@ -22,6 +22,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 const navItems = [
   { id: "dashboard", label: "Network Desk", icon: LayoutDashboard, href: "/" },
   { id: "add", label: "Add Relationship", icon: SquarePen, href: "/relationships/new" },
+  { id: "define-mandate", label: "Add Mandate", icon: GitBranch, href: "/mandates/new" },
   { id: "people", label: "People", icon: Users, href: "/#people" },
   { id: "organizations", label: "Organizations", icon: Building2, href: "/#organizations" },
   { id: "cards", label: "Business Cards", icon: FileStack, href: "/#cards" },
