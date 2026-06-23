@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useDeferredValue, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createColumnHelper,
@@ -10,6 +10,16 @@ import {
 } from "@tanstack/react-table";
 import { Badge } from "@/components/badge";
 import { formatStatus } from "@/lib/format";
+import {
+  accessPathOptions,
+  approachOptions,
+  geographyOptions,
+  influenceTypeOptions,
+  institutionTypeOptions,
+  mandateThemeOptions,
+  publicPrivateStatusOptions,
+  sectorOptions
+} from "@/lib/intelligence-options";
 import { deletePerson, updatePerson } from "@/lib/supabase/relationship-actions";
 import { Building2, GitBranch, Network, Pencil, Save, Search, Trash2, Users, X } from "lucide-react";
 import type { Mandate, OutreachItem, Person, Role } from "@/types/domain";
@@ -136,13 +146,14 @@ export function PeopleTable({
   const [editIntelligence, setEditIntelligence] = useState<EditIntelligenceState>(emptyEditIntelligence);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const selectedMandate = mandates.find((mandate) => mandate.id === selectedScopeId);
   const scopedPeople = useMemo(
     () => (selectedMandate ? people.filter((person) => personMatchesMandate(person, selectedMandate, outreachQueue)) : people),
     [outreachQueue, people, selectedMandate]
   );
   const filteredPeople = useMemo(() => {
-    const normalizedQuery = normalizeSearch(query);
+    const normalizedQuery = normalizeSearch(deferredQuery);
     return scopedPeople.filter((person) => {
       const matchesReview = reviewFilter === "all" || person.reviewStatus === reviewFilter;
       const matchesSearch =
@@ -177,7 +188,7 @@ export function PeopleTable({
 
       return matchesReview && matchesSearch;
     });
-  }, [query, reviewFilter, scopedPeople]);
+  }, [deferredQuery, reviewFilter, scopedPeople]);
   const pageCount = Math.max(1, Math.ceil(filteredPeople.length / pageSize));
   const safePage = Math.min(page, pageCount - 1);
   const visiblePeople = filteredPeople.slice(safePage * pageSize, safePage * pageSize + pageSize);
@@ -531,22 +542,28 @@ function EditIntelligenceFields({
     <div className="intelligence-capture">
       <div className="section-kicker">Relationship intelligence</div>
       <div className="record-editor-grid intelligence-form-grid">
-        <label>
-          <span className="field-label">Influence type</span>
-          <input className="text-input" onChange={(event) => updateField("influenceType", event.target.value)} value={intelligence.influenceType} />
-        </label>
-        <label>
-          <span className="field-label">Access path</span>
-          <input className="text-input" onChange={(event) => updateField("accessPath", event.target.value)} value={intelligence.accessPath} />
-        </label>
+        <SelectField
+          label="Influence type"
+          onChange={(value) => updateField("influenceType", value)}
+          options={influenceTypeOptions}
+          value={intelligence.influenceType}
+        />
+        <SelectField
+          label="Access path"
+          onChange={(value) => updateField("accessPath", value)}
+          options={accessPathOptions}
+          value={intelligence.accessPath}
+        />
         <label>
           <span className="field-label">Relationship owner</span>
           <input className="text-input" onChange={(event) => updateField("relationshipOwner", event.target.value)} value={intelligence.relationshipOwner} />
         </label>
-        <label>
-          <span className="field-label">Best approach</span>
-          <input className="text-input" onChange={(event) => updateField("bestApproach", event.target.value)} value={intelligence.bestApproach} />
-        </label>
+        <SelectField
+          label="Best approach"
+          onChange={(value) => updateField("bestApproach", value)}
+          options={approachOptions}
+          value={intelligence.bestApproach}
+        />
         <label>
           <span className="field-label">Sensitivity</span>
           <select
@@ -584,10 +601,12 @@ function EditIntelligenceFields({
           <span className="field-label">Languages</span>
           <input className="text-input" onChange={(event) => updateField("languages", event.target.value)} value={intelligence.languages} />
         </label>
-        <label>
-          <span className="field-label">Public/private status</span>
-          <input className="text-input" onChange={(event) => updateField("publicPrivateStatus", event.target.value)} value={intelligence.publicPrivateStatus} />
-        </label>
+        <SelectField
+          label="Public/private status"
+          onChange={(value) => updateField("publicPrivateStatus", value)}
+          options={publicPrivateStatusOptions}
+          value={intelligence.publicPrivateStatus}
+        />
         <label>
           <span className="field-label">Source confidence</span>
           <input
@@ -626,24 +645,104 @@ function EditIntelligenceFields({
         ))}
       </div>
       <div className="record-editor-grid intelligence-form-grid">
-        <label>
-          <span className="field-label">Relevant mandates</span>
-          <input className="text-input" onChange={(event) => updateField("relevantMandates", event.target.value)} value={intelligence.relevantMandates} />
-        </label>
-        <label>
-          <span className="field-label">Relevant geographies</span>
-          <input className="text-input" onChange={(event) => updateField("relevantGeographies", event.target.value)} value={intelligence.relevantGeographies} />
-        </label>
-        <label>
-          <span className="field-label">Relevant sectors</span>
-          <input className="text-input" onChange={(event) => updateField("relevantSectors", event.target.value)} value={intelligence.relevantSectors} />
-        </label>
-        <label>
-          <span className="field-label">Relevant institutions</span>
-          <input className="text-input" onChange={(event) => updateField("relevantInstitutions", event.target.value)} value={intelligence.relevantInstitutions} />
-        </label>
+        <MultiSelectField
+          label="Relevant mandates"
+          onChange={(value) => updateField("relevantMandates", value)}
+          options={mandateThemeOptions}
+          value={intelligence.relevantMandates}
+        />
+        <MultiSelectField
+          label="Relevant geographies"
+          onChange={(value) => updateField("relevantGeographies", value)}
+          options={geographyOptions}
+          value={intelligence.relevantGeographies}
+        />
+        <MultiSelectField
+          label="Relevant sectors"
+          onChange={(value) => updateField("relevantSectors", value)}
+          options={sectorOptions}
+          value={intelligence.relevantSectors}
+        />
+        <MultiSelectField
+          label="Relevant institutions"
+          onChange={(value) => updateField("relevantInstitutions", value)}
+          options={institutionTypeOptions}
+          value={intelligence.relevantInstitutions}
+        />
       </div>
     </div>
+  );
+}
+
+function SelectField({
+  label,
+  onChange,
+  options,
+  value
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  value: string;
+}) {
+  const hasLegacyValue = Boolean(value) && !options.some((option) => option.value === value);
+
+  return (
+    <label>
+      <span className="field-label">{label}</span>
+      <select className="text-input" onChange={(event) => onChange(event.target.value)} value={value}>
+        {hasLegacyValue ? <option value={value}>Legacy: {value}</option> : null}
+        {options.map((option) => (
+          <option key={option.value || "empty"} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function MultiSelectField({
+  label,
+  onChange,
+  options,
+  value
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: string[];
+  value: string;
+}) {
+  const selected = splitList(value);
+  const legacyOptions = selected.filter((item) => !options.includes(item));
+
+  return (
+    <label>
+      <span className="field-label">{label}</span>
+      <select
+        className="text-input"
+        multiple
+        onChange={(event) =>
+          onChange(
+            Array.from(event.currentTarget.selectedOptions)
+              .map((option) => option.value)
+              .join(", ")
+          )
+        }
+        value={selected}
+      >
+        {legacyOptions.map((option) => (
+          <option key={option} value={option}>
+            Legacy: {option}
+          </option>
+        ))}
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
