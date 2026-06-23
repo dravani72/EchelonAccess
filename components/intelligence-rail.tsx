@@ -9,7 +9,7 @@ export function IntelligenceRail({ data }: { data: AppData }) {
         <p>
           {data.source === "supabase"
             ? data.diagnostic ?? `Connected to Supabase workspace: ${data.currentWorkspace?.name ?? "Workspace"}.`
-            : "Using local mock data because Supabase is not required in this environment."}
+            : "Mock data is disabled. Configure Supabase to load workspace records."}
         </p>
       </div>
       <div className="rail-card">
@@ -22,7 +22,7 @@ export function IntelligenceRail({ data }: { data: AppData }) {
       <div className="rail-card">
         <h3>Suggested Next Move</h3>
         <p>
-          Approve the Amelia Hart outreach draft after tightening the infrastructure mandate into a one-page ask.
+          Add real relationship, mandate, and source records to start generating workspace-specific next moves.
         </p>
       </div>
       <div className="rail-card">

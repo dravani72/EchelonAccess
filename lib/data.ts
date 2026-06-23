@@ -1,6 +1,5 @@
 import { getSupabaseConfigStatus } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { interactions, mandates, outreachQueue, people, reviewTasks, roles } from "@/lib/mock-data";
 import type { BusinessCard, Interaction, Mandate, OutreachItem, Person, ReviewTask, Role, Workspace } from "@/types/domain";
 
 type SupabaseResult<T = Record<string, unknown>> = Promise<{ data: T[] | null; error: { message: string } | null }>;
@@ -34,23 +33,12 @@ type UntypedSupabase = {
   };
 };
 
-type MockableRecord = { id: string; isMockData?: boolean };
-
 const mockSeedIds = new Set<string>();
 for (const group of ["0", "2", "3", "4", "5", "6"]) {
   for (const suffix of ["1", "2", "3", "4"]) {
     mockSeedIds.add(`${group}0000000-0000-4000-8000-00000000000${suffix}`);
   }
 }
-
-const mockPeople = new Set(people.flatMap((person) => [person.id, normalizeMockValue(person.displayName), normalizeMockValue(person.canonicalName)]));
-const mockRoles = new Set(roles.flatMap((role) => [role.id, mockRoleFingerprint(role.title, role.organizationName, role.sourceLabel)]));
-const mockInteractions = new Set(interactions.flatMap((interaction) => [interaction.id, normalizeMockValue(interaction.summary)]));
-const mockMandates = new Set(mandates.flatMap((mandate) => [mandate.id, normalizeMockValue(mandate.title)]));
-const mockOutreach = new Set(
-  outreachQueue.flatMap((item) => [item.id, mockOutreachFingerprint(item.personName, item.mandateTitle, item.reason)])
-);
-const mockReviewTasks = new Set(reviewTasks.flatMap((task) => [task.id, normalizeMockValue(task.title)]));
 
 export type AppData = {
   people: Person[];
@@ -70,11 +58,11 @@ export async function getAppData(): Promise<AppData> {
   const configStatus = getSupabaseConfigStatus();
 
   if (configStatus.state !== "ready") {
-    if (configStatus.isRequired) {
-      return getEmptySupabaseData(configStatus.message);
-    }
-
-    return getMockData();
+    return getEmptySupabaseData(
+      configStatus.isRequired
+        ? configStatus.message
+        : "Supabase is not configured in this environment. Mock data is disabled, so no local demo records are shown."
+    );
   }
 
   try {
@@ -185,42 +173,43 @@ export async function getAppData(): Promise<AppData> {
         .filter(Boolean) as string[]
     );
 
+    const realPeople = ((peopleResult.data ?? []) as Parameters<typeof mapPerson>[0][]).map(mapPerson).filter((record) => !record.isMockData);
+    const realRoles = ((rolesResult.data ?? []) as Parameters<typeof mapRole>[0][]).map(mapRole).filter((record) => !record.isMockData);
+    const realInteractions = ((interactionsResult.data ?? []) as Parameters<typeof mapInteraction>[0][])
+      .map(mapInteraction)
+      .filter((record) => !record.isMockData);
+    const realBusinessCards = ((businessCardsResult.data ?? []) as Parameters<typeof mapBusinessCard>[0][])
+      .map((card) => mapBusinessCard(card, card.image_url ? signedCardUrls.get(card.image_url) : undefined))
+      .filter((record) => !record.isMockData);
+    const realMandates = ((mandatesResult.data ?? []) as Parameters<typeof mapMandate>[0][])
+      .map(mapMandate)
+      .filter((record) => !record.isMockData);
+    const realOutreachQueue = ((outreachResult.data ?? []) as Parameters<typeof mapOutreachItem>[0][])
+      .map(mapOutreachItem)
+      .filter((record) => !record.isMockData);
+    const realReviewTasks = ((reviewResult.data ?? []) as Parameters<typeof mapReviewTask>[0][])
+      .map(mapReviewTask)
+      .filter((record) => !record.isMockData);
+
     return {
-      people: ((peopleResult.data ?? []) as Parameters<typeof mapPerson>[0][]).map(mapPerson),
-      roles: ((rolesResult.data ?? []) as Parameters<typeof mapRole>[0][]).map(mapRole),
-      interactions: ((interactionsResult.data ?? []) as Parameters<typeof mapInteraction>[0][]).map(mapInteraction),
-      businessCards: ((businessCardsResult.data ?? []) as Parameters<typeof mapBusinessCard>[0][]).map((card) =>
-        mapBusinessCard(card, card.image_url ? signedCardUrls.get(card.image_url) : undefined)
-      ),
-      mandates: ((mandatesResult.data ?? []) as Parameters<typeof mapMandate>[0][]).map(mapMandate),
-      outreachQueue: ((outreachResult.data ?? []) as Parameters<typeof mapOutreachItem>[0][]).map(mapOutreachItem),
-      reviewTasks: ((reviewResult.data ?? []) as Parameters<typeof mapReviewTask>[0][]).map(mapReviewTask),
+      people: realPeople,
+      roles: realRoles,
+      interactions: realInteractions,
+      businessCards: realBusinessCards,
+      mandates: realMandates,
+      outreachQueue: realOutreachQueue,
+      reviewTasks: realReviewTasks,
       workspaces,
       currentWorkspace,
       source: "supabase",
       diagnostic:
-        peopleResult.data?.length || mandatesResult.data?.length || reviewResult.data?.length
+        realPeople.length || realMandates.length || realReviewTasks.length
           ? undefined
-          : "Connected to Supabase, but this workspace has no seeded relationship records yet."
+          : "Connected to Supabase, but this workspace has no relationship records yet."
     };
   } catch (error) {
     return getEmptySupabaseData(error instanceof Error ? error.message : "Unknown Supabase data loading error.");
   }
-}
-
-function getMockData(): AppData {
-  return {
-    people: markMockRecords(people),
-    roles: markMockRecords(roles),
-    interactions: markMockRecords(interactions),
-    businessCards: [],
-    mandates: markMockRecords(mandates),
-    outreachQueue: markMockRecords(outreachQueue),
-    reviewTasks: markMockRecords(reviewTasks),
-    workspaces: [{ id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" }],
-    currentWorkspace: { id: "local", name: "Local Offline Workspace", slug: "local", role: "owner" },
-    source: "mock"
-  };
 }
 
 function getEmptySupabaseData(diagnostic: string): AppData {
@@ -321,7 +310,7 @@ function mapPerson(row: {
     sourceCount: row.source_count,
     mandateMatches: row.mandate_matches,
     reviewStatus: row.review_status,
-    isMockData: isMockPerson(row.id, row.display_name, row.canonical_name)
+    isMockData: isMockSeedId(row.id)
   };
 }
 
@@ -346,7 +335,7 @@ function mapRole(row: {
     isCurrent: row.is_current,
     confidence: row.confidence,
     sourceLabel: row.source_label,
-    isMockData: isMockRole(row.id, row.title, row.organization_name, row.source_label)
+    isMockData: isMockSeedId(row.id)
   };
 }
 
@@ -371,7 +360,7 @@ function mapInteraction(row: {
     nextStep: row.next_step ?? undefined,
     confidence: row.confidence,
     sourceLabel: row.source_label,
-    isMockData: isMockInteraction(row.id, row.summary)
+    isMockData: isMockSeedId(row.id)
   };
 }
 
@@ -543,7 +532,7 @@ function mapMandate(row: {
     status: row.status,
     relevantContacts: row.relevant_contacts,
     nextAction: row.next_action ?? "Define next action",
-    isMockData: isMockMandate(row.id, row.title)
+    isMockData: isMockSeedId(row.id)
   };
 }
 
@@ -568,7 +557,7 @@ function mapOutreachItem(row: {
     riskLevel: row.risk_level,
     dueDate: row.due_date ?? "Unscheduled",
     status: row.status,
-    isMockData: isMockOutreach(row.id, row.person_name, row.mandate_title, row.reason)
+    isMockData: isMockSeedId(row.id)
   };
 }
 
@@ -583,52 +572,12 @@ function mapReviewTask(row: {
     title: row.title,
     detail: row.detail,
     status: row.status,
-    isMockData: isMockReviewTask(row.id, row.title)
+    isMockData: isMockSeedId(row.id)
   };
-}
-
-function markMockRecords<T extends MockableRecord>(records: T[]): T[] {
-  return records.map((record) => ({ ...record, isMockData: true }));
 }
 
 function isMockSeedId(id: string) {
   return mockSeedIds.has(id) || id.startsWith("p-") || id.startsWith("r-") || id.startsWith("i-") || id.startsWith("m-") || id.startsWith("q-") || id.startsWith("t-");
-}
-
-function isMockPerson(id: string, displayName: string, canonicalName: string) {
-  return isMockSeedId(id) || mockPeople.has(normalizeMockValue(displayName)) || mockPeople.has(normalizeMockValue(canonicalName));
-}
-
-function isMockRole(id: string, title: string, organizationName: string, sourceLabel: string) {
-  return isMockSeedId(id) || mockRoles.has(mockRoleFingerprint(title, organizationName, sourceLabel));
-}
-
-function isMockInteraction(id: string, summary: string) {
-  return isMockSeedId(id) || mockInteractions.has(normalizeMockValue(summary));
-}
-
-function isMockMandate(id: string, title: string) {
-  return isMockSeedId(id) || mockMandates.has(normalizeMockValue(title));
-}
-
-function isMockOutreach(id: string, personName: string, mandateTitle: string, reason: string) {
-  return isMockSeedId(id) || mockOutreach.has(mockOutreachFingerprint(personName, mandateTitle, reason));
-}
-
-function isMockReviewTask(id: string, title: string) {
-  return isMockSeedId(id) || mockReviewTasks.has(normalizeMockValue(title));
-}
-
-function mockRoleFingerprint(title: string, organizationName: string, sourceLabel: string) {
-  return [title, organizationName, sourceLabel].map(normalizeMockValue).join("|");
-}
-
-function mockOutreachFingerprint(personName: string, mandateTitle: string, reason: string) {
-  return [personName, mandateTitle, reason].map(normalizeMockValue).join("|");
-}
-
-function normalizeMockValue(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function clampStrength(value: number): Person["relationshipStrength"] {

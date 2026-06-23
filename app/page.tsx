@@ -7,7 +7,6 @@ import { OutreachQueue } from "@/components/outreach-queue";
 import { PeopleTable } from "@/components/people-table";
 import { PersonDossier } from "@/components/person-dossier";
 import { RelationshipIntake } from "@/components/relationship-intake";
-import { ReviewStation } from "@/components/review-station";
 import { getAppData } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +17,7 @@ export default async function Home() {
   return (
     <AccessGate>
       <AppShell>
-        <div className={`page ${data.source === "mock" ? "mock-data-mode" : ""}`}>
+        <div className="page">
           <div className="stack">
             <section>
               <h1 className="section-title">Relationship Intelligence Desk</h1>
@@ -42,7 +41,6 @@ export default async function Home() {
               people={data.people}
               roles={data.roles}
             />
-            <ReviewStation />
             <MandatesPanel mandates={data.mandates} />
             <OutreachQueue outreachQueue={data.outreachQueue} />
           </div>

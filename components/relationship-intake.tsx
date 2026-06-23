@@ -210,7 +210,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                   <input
                     className="text-input"
                     onChange={(event) => setManualName(event.target.value)}
-                    placeholder="Amelia Hart"
+                    placeholder="Full name"
                     value={manualName}
                   />
                 </label>
@@ -219,7 +219,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                   <input
                     className="text-input"
                     onChange={(event) => setManualTitle(event.target.value)}
-                    placeholder="Partner, Strategic Infrastructure"
+                    placeholder="Current title"
                     value={manualTitle}
                   />
                 </label>
@@ -228,7 +228,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                   <input
                     className="text-input"
                     onChange={(event) => setManualOrg(event.target.value)}
-                    placeholder="Northbridge Capital"
+                    placeholder="Current organization"
                     value={manualOrg}
                   />
                 </label>
@@ -281,7 +281,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                 <input
                   className="text-input"
                   onChange={(event) => setManualName(event.target.value)}
-                  placeholder="Amelia Hart"
+                  placeholder="Full name"
                   value={manualName}
                 />
               </label>
@@ -290,7 +290,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                 <input
                   className="text-input"
                   onChange={(event) => setManualOrg(event.target.value)}
-                  placeholder="Northbridge Capital"
+                  placeholder="Current organization"
                   value={manualOrg}
                 />
               </label>
@@ -299,7 +299,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                 <input
                   className="text-input"
                   onChange={(event) => setManualTitle(event.target.value)}
-                  placeholder="Partner, Strategic Infrastructure"
+                  placeholder="Current title"
                   value={manualTitle}
                 />
               </label>

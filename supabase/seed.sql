@@ -7,7 +7,7 @@
 
 do $$
 declare
-  owner_user_id uuid := '00000000-0000-0000-0000-000000000000';
+  owner_user_id uuid := '50c4484a-a0aa-4d63-a083-f024d8ba5530';
   seeded_workspace_id uuid := gen_random_uuid();
 begin
   if owner_user_id = '00000000-0000-0000-0000-000000000000' then
