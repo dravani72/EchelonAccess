@@ -52,6 +52,10 @@ export async function createRelationship(input: CreateRelationshipInput) {
     .single();
 
   if (personError || !person) {
+    if (personError?.message.toLowerCase().includes("avatar_url")) {
+      throw new Error("The people.avatar_url column is missing from Supabase schema cache. Run supabase/people-assets.sql in Supabase SQL Editor.");
+    }
+
     throw new Error(personError?.message ?? "Could not create relationship.");
   }
 
