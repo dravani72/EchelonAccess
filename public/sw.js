@@ -19,14 +19,16 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const requestUrl = new URL(event.request.url);
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-        return response;
-      })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match(withScope("/"))))
-  );
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request).catch(() => caches.match(withScope("/"))));
+    return;
+  }
+
+  if (requestUrl.origin !== self.location.origin || !APP_SHELL.includes(requestUrl.pathname)) {
+    return;
+  }
+
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });
