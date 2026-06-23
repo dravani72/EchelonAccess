@@ -6,7 +6,6 @@ import { Metrics } from "@/components/metrics";
 import { OutreachQueue } from "@/components/outreach-queue";
 import { PeopleTable } from "@/components/people-table";
 import { PersonDossier } from "@/components/person-dossier";
-import { RelationshipGraph } from "@/components/relationship-graph";
 import { RelationshipIntake } from "@/components/relationship-intake";
 import { ReviewStation } from "@/components/review-station";
 import { getAppData } from "@/lib/data";
@@ -30,17 +29,20 @@ export default async function Home() {
 
             <Metrics data={data} />
             <RelationshipIntake source={data.source} workspaceId={data.currentWorkspace?.id} />
-            <PeopleTable people={data.people} source={data.source} />
+            <PeopleTable
+              mandates={data.mandates}
+              outreachQueue={data.outreachQueue}
+              people={data.people}
+              roles={data.roles}
+              source={data.source}
+            />
             <PersonDossier
               businessCards={data.businessCards}
               interactions={data.interactions}
               people={data.people}
               roles={data.roles}
             />
-            <div className="grid-two">
-              <ReviewStation />
-              <RelationshipGraph />
-            </div>
+            <ReviewStation />
             <MandatesPanel mandates={data.mandates} />
             <OutreachQueue outreachQueue={data.outreachQueue} />
           </div>

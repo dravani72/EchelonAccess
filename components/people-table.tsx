@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createColumnHelper,
@@ -11,8 +11,8 @@ import {
 import { Badge } from "@/components/badge";
 import { formatStatus } from "@/lib/format";
 import { deletePerson, updatePerson } from "@/lib/supabase/relationship-actions";
-import { Pencil, Save, Trash2, X } from "lucide-react";
-import type { Person } from "@/types/domain";
+import { Building2, GitBranch, Network, Pencil, Save, Search, Trash2, Users, X } from "lucide-react";
+import type { Mandate, OutreachItem, Person, Role } from "@/types/domain";
 
 const columnHelper = createColumnHelper<Person>();
 
@@ -54,22 +54,163 @@ const columns = [
   })
 ];
 
-export function PeopleTable({ people, source }: { people: Person[]; source: "supabase" | "mock" }) {
+const pageSize = 25;
+type EditIntelligenceState = {
+  trustLevel: "" | NonNullable<Person["trustLevel"]>;
+  opposition: string;
+  nationality: string;
+  languages: string;
+  publicPrivateStatus: string;
+  influenceType: string;
+  accessPath: string;
+  relationshipOwner: string;
+  bestApproach: string;
+  currentAuthority: string;
+  historicalAuthority: string;
+  sensitivityLevel: "" | NonNullable<Person["sensitivityLevel"]>;
+  motivations: string;
+  constraints: string;
+  relevantMandates: string;
+  relevantGeographies: string;
+  relevantSectors: string;
+  relevantInstitutions: string;
+  keyRelationships: string;
+  doNotDiscuss: string;
+  bestNextMove: string;
+  sourceConfidence: string;
+  lastVerifiedDate: string;
+};
+
+const emptyEditIntelligence: EditIntelligenceState = {
+  trustLevel: "",
+  opposition: "",
+  nationality: "",
+  languages: "",
+  publicPrivateStatus: "",
+  influenceType: "",
+  accessPath: "",
+  relationshipOwner: "",
+  bestApproach: "",
+  currentAuthority: "",
+  historicalAuthority: "",
+  sensitivityLevel: "",
+  motivations: "",
+  constraints: "",
+  relevantMandates: "",
+  relevantGeographies: "",
+  relevantSectors: "",
+  relevantInstitutions: "",
+  keyRelationships: "",
+  doNotDiscuss: "",
+  bestNextMove: "",
+  sourceConfidence: "",
+  lastVerifiedDate: ""
+};
+
+export function PeopleTable({
+  people,
+  mandates,
+  outreachQueue,
+  roles,
+  source
+}: {
+  people: Person[];
+  mandates: Mandate[];
+  outreachQueue: OutreachItem[];
+  roles: Role[];
+  source: "supabase" | "mock";
+}) {
   const router = useRouter();
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [selectedScopeId, setSelectedScopeId] = useState("all");
+  const [query, setQuery] = useState("");
+  const [reviewFilter, setReviewFilter] = useState<"all" | Person["reviewStatus"]>("all");
+  const [page, setPage] = useState(0);
   const [editName, setEditName] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editOrganization, setEditOrganization] = useState("");
   const [editStrength, setEditStrength] = useState(1);
   const [editWarmth, setEditWarmth] = useState<Person["warmthStatus"]>("cold");
   const [editNotes, setEditNotes] = useState("");
+  const [editIntelligence, setEditIntelligence] = useState<EditIntelligenceState>(emptyEditIntelligence);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const selectedMandate = mandates.find((mandate) => mandate.id === selectedScopeId);
+  const scopedPeople = useMemo(
+    () => (selectedMandate ? people.filter((person) => personMatchesMandate(person, selectedMandate, outreachQueue)) : people),
+    [outreachQueue, people, selectedMandate]
+  );
+  const filteredPeople = useMemo(() => {
+    const normalizedQuery = normalizeSearch(query);
+    return scopedPeople.filter((person) => {
+      const matchesReview = reviewFilter === "all" || person.reviewStatus === reviewFilter;
+      const matchesSearch =
+        !normalizedQuery ||
+        [
+          person.displayName,
+          person.currentTitle,
+          person.currentOrganization,
+          person.trustLevel ?? "",
+          person.geography,
+          person.sectorTags.join(" "),
+          person.influenceType ?? "",
+          person.accessPath ?? "",
+          person.relationshipOwner ?? "",
+          person.bestApproach ?? "",
+          person.currentAuthority ?? "",
+          person.historicalAuthority ?? "",
+          person.motivations ?? "",
+          person.constraints ?? "",
+          person.opposition ?? "",
+          person.relevantMandates?.join(" ") ?? "",
+          person.relevantGeographies?.join(" ") ?? "",
+          person.relevantSectors?.join(" ") ?? "",
+          person.relevantInstitutions?.join(" ") ?? "",
+          person.keyRelationships ?? "",
+          person.doNotDiscuss ?? "",
+          person.bestNextMove ?? "",
+          person.notes ?? ""
+        ]
+          .map(normalizeSearch)
+          .some((value) => value.includes(normalizedQuery));
+
+      return matchesReview && matchesSearch;
+    });
+  }, [query, reviewFilter, scopedPeople]);
+  const pageCount = Math.max(1, Math.ceil(filteredPeople.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const visiblePeople = filteredPeople.slice(safePage * pageSize, safePage * pageSize + pageSize);
+  const scopedOrganizationCount = useMemo(() => {
+    const scopedIds = new Set(scopedPeople.map((person) => person.id));
+    const organizations = new Set<string>();
+    scopedPeople.forEach((person) => {
+      if (person.currentOrganization) organizations.add(person.currentOrganization);
+    });
+    roles.forEach((role) => {
+      if (scopedIds.has(role.personId)) organizations.add(role.organizationName);
+    });
+    return organizations.size;
+  }, [roles, scopedPeople]);
   const table = useReactTable({
-    data: people,
+    data: visiblePeople,
     columns,
     getCoreRowModel: getCoreRowModel()
   });
+
+  function setScope(scopeId: string) {
+    setSelectedScopeId(scopeId);
+    setPage(0);
+  }
+
+  function setSearch(value: string) {
+    setQuery(value);
+    setPage(0);
+  }
+
+  function setReview(value: "all" | Person["reviewStatus"]) {
+    setReviewFilter(value);
+    setPage(0);
+  }
 
   function beginEdit(person: Person) {
     setEditingPerson(person);
@@ -79,6 +220,7 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
     setEditStrength(person.relationshipStrength);
     setEditWarmth(person.warmthStatus);
     setEditNotes(person.notes ?? "");
+    setEditIntelligence(personToEditIntelligence(person));
     setStatus("");
     setError("");
   }
@@ -95,7 +237,8 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
         currentOrganization: editOrganization,
         relationshipStrength: editStrength,
         warmthStatus: editWarmth,
-        notes: editNotes
+        notes: editNotes,
+        ...serializeEditIntelligence(editIntelligence)
       });
       setEditingPerson(null);
       setStatus("Relationship updated.");
@@ -128,12 +271,75 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
       <div className="panel-header">
         <div>
           <h2 className="panel-title">People Intelligence</h2>
-          <div className="section-kicker">Dense relationship table with source and mandate context.</div>
+          <div className="section-kicker">Scoped relationship lists for large networks, driven by mandate and graph context.</div>
         </div>
         <div className="badge-row">
-          <Badge tone="blue">Government</Badge>
-          <Badge tone="purple">Active mandate</Badge>
-          <Badge tone="amber">Needs review</Badge>
+          <Badge tone="blue">{filteredPeople.length} people</Badge>
+          <Badge tone="purple">{scopedOrganizationCount} organizations</Badge>
+          <Badge tone="amber">{selectedMandate ? selectedMandate.title : "All relationships"}</Badge>
+        </div>
+      </div>
+      <div className="people-workbench">
+        <aside className="scope-panel">
+          <div className="scope-panel-title">
+            <GitBranch size={15} />
+            Scope
+          </div>
+          <button className={`scope-option ${selectedScopeId === "all" ? "active" : ""}`} onClick={() => setScope("all")} type="button">
+            <span>All Relationships</span>
+            <Badge tone="blue">{people.length}</Badge>
+          </button>
+          {mandates.map((mandate) => {
+            const count = people.filter((person) => personMatchesMandate(person, mandate, outreachQueue)).length;
+            return (
+              <button
+                className={`scope-option ${selectedScopeId === mandate.id ? "active" : ""} ${mandate.isMockData ? "mock-record" : ""}`}
+                key={mandate.id}
+                onClick={() => setScope(mandate.id)}
+                type="button"
+              >
+                <span>{mandate.title}</span>
+                <Badge tone={mandate.status === "active" ? "green" : "purple"}>{count}</Badge>
+              </button>
+            );
+          })}
+        </aside>
+
+        <div className="scope-main">
+          <div className="scope-graph" aria-label="Scoped relationship graph">
+            <button className={`graph-node graph-node-mandate ${selectedMandate ? "active" : ""}`} onClick={() => setScope(selectedMandate?.id ?? "all")} type="button">
+              <Network size={15} />
+              {selectedMandate ? selectedMandate.title : "All graph"}
+            </button>
+            <div className="graph-link" />
+            <div className="graph-cluster">
+              <button className="graph-node graph-node-people" type="button">
+                <Users size={15} />
+                {filteredPeople.length} people
+              </button>
+              <button className="graph-node graph-node-orgs" type="button">
+                <Building2 size={15} />
+                {scopedOrganizationCount} orgs
+              </button>
+            </div>
+          </div>
+
+          <div className="people-controls">
+            <label className="search-control">
+              <Search size={15} />
+              <input
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search scoped people, organizations, roles, sectors..."
+                value={query}
+              />
+            </label>
+            <select className="text-input compact-select" onChange={(event) => setReview(event.target.value as "all" | Person["reviewStatus"])} value={reviewFilter}>
+              <option value="all">All review states</option>
+              <option value="verified">Verified</option>
+              <option value="needs_review">Needs review</option>
+              <option value="possible_duplicate">Possible duplicate</option>
+            </select>
+          </div>
         </div>
       </div>
       {editingPerson ? (
@@ -184,6 +390,7 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
               </select>
             </label>
           </div>
+          <EditIntelligenceFields intelligence={editIntelligence} setIntelligence={setEditIntelligence} />
           <label>
             <span className="field-label">Notes</span>
             <textarea className="text-area" onChange={(event) => setEditNotes(event.target.value)} value={editNotes} />
@@ -202,7 +409,7 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
       ) : null}
       {error ? <div className="form-error panel-message">{error}</div> : null}
       {status ? <div className="form-notice panel-message">{status}</div> : null}
-      <div className="panel-body" style={{ padding: 0 }}>
+      <div className="panel-body people-table-wrap" style={{ padding: 0 }}>
         <table className="table">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -217,26 +424,273 @@ export function PeopleTable({ people, source }: { people: Person[]; source: "sup
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr className={row.original.isMockData ? "mock-record" : undefined} key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                ))}
-                <td>
-                  <div className="table-actions">
-                    <button className="button icon-button" disabled={source !== "supabase"} onClick={() => beginEdit(row.original)} type="button">
-                      <Pencil size={15} />
-                    </button>
-                    <button className="button icon-button" disabled={source !== "supabase"} onClick={() => handleDelete(row.original)} type="button">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <tr className={row.original.isMockData ? "mock-record" : undefined} key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  ))}
+                  <td>
+                    <div className="table-actions">
+                      <button className="button icon-button" disabled={source !== "supabase"} onClick={() => beginEdit(row.original)} type="button">
+                        <Pencil size={15} />
+                      </button>
+                      <button className="button icon-button" disabled={source !== "supabase"} onClick={() => handleDelete(row.original)} type="button">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={columns.length + 1}>
+                  <div className="empty-state">No people match the current scope.</div>
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
+      <div className="pagination-bar">
+        <span>
+          Showing {filteredPeople.length ? safePage * pageSize + 1 : 0}-{Math.min((safePage + 1) * pageSize, filteredPeople.length)} of{" "}
+          {filteredPeople.length}
+        </span>
+        <div className="table-actions">
+          <button className="button" disabled={safePage === 0} onClick={() => setPage((current) => Math.max(0, current - 1))} type="button">
+            Previous
+          </button>
+          <span className="page-indicator">
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            className="button"
+            disabled={safePage >= pageCount - 1}
+            onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+            type="button"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
+}
+
+function personMatchesMandate(person: Person, mandate: Mandate, outreachQueue: OutreachItem[]) {
+  const queuedNames = new Set(
+    outreachQueue
+      .filter((item) => normalizeSearch(item.mandateTitle) === normalizeSearch(mandate.title))
+      .map((item) => normalizeSearch(item.personName))
+  );
+  const personName = normalizeSearch(person.displayName);
+  const sectorMatch = mandate.sector ? person.sectorTags.map(normalizeSearch).includes(normalizeSearch(mandate.sector)) : false;
+  const geographyMatch =
+    mandate.geography?.some((place) => {
+      const normalizedPlace = normalizeSearch(place);
+      const normalizedPersonGeo = normalizeSearch(person.geography);
+      return normalizedPersonGeo.includes(normalizedPlace) || normalizedPlace.includes(normalizedPersonGeo);
+    }) ?? false;
+
+  return queuedNames.has(personName) || sectorMatch || geographyMatch;
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function EditIntelligenceFields({
+  intelligence,
+  setIntelligence
+}: {
+  intelligence: EditIntelligenceState;
+  setIntelligence: (value: EditIntelligenceState) => void;
+}) {
+  function updateField<K extends keyof EditIntelligenceState>(field: K, value: EditIntelligenceState[K]) {
+    setIntelligence({ ...intelligence, [field]: value });
+  }
+
+  return (
+    <div className="intelligence-capture">
+      <div className="section-kicker">Relationship intelligence</div>
+      <div className="record-editor-grid intelligence-form-grid">
+        <label>
+          <span className="field-label">Influence type</span>
+          <input className="text-input" onChange={(event) => updateField("influenceType", event.target.value)} value={intelligence.influenceType} />
+        </label>
+        <label>
+          <span className="field-label">Access path</span>
+          <input className="text-input" onChange={(event) => updateField("accessPath", event.target.value)} value={intelligence.accessPath} />
+        </label>
+        <label>
+          <span className="field-label">Relationship owner</span>
+          <input className="text-input" onChange={(event) => updateField("relationshipOwner", event.target.value)} value={intelligence.relationshipOwner} />
+        </label>
+        <label>
+          <span className="field-label">Best approach</span>
+          <input className="text-input" onChange={(event) => updateField("bestApproach", event.target.value)} value={intelligence.bestApproach} />
+        </label>
+        <label>
+          <span className="field-label">Sensitivity</span>
+          <select
+            className="text-input"
+            onChange={(event) => updateField("sensitivityLevel", event.target.value as EditIntelligenceState["sensitivityLevel"])}
+            value={intelligence.sensitivityLevel}
+          >
+            <option value="">Not set</option>
+            <option value="low">Low</option>
+            <option value="moderate">Moderate</option>
+            <option value="high">High</option>
+            <option value="sensitive">Sensitive</option>
+          </select>
+        </label>
+        <label>
+          <span className="field-label">Trust level</span>
+          <select
+            className="text-input"
+            onChange={(event) => updateField("trustLevel", event.target.value as EditIntelligenceState["trustLevel"])}
+            value={intelligence.trustLevel}
+          >
+            <option value="">Not set</option>
+            <option value="unknown">Unknown</option>
+            <option value="low">Low</option>
+            <option value="moderate">Moderate</option>
+            <option value="high">High</option>
+            <option value="sensitive">Sensitive</option>
+          </select>
+        </label>
+        <label>
+          <span className="field-label">Nationality</span>
+          <input className="text-input" onChange={(event) => updateField("nationality", event.target.value)} value={intelligence.nationality} />
+        </label>
+        <label>
+          <span className="field-label">Languages</span>
+          <input className="text-input" onChange={(event) => updateField("languages", event.target.value)} value={intelligence.languages} />
+        </label>
+        <label>
+          <span className="field-label">Public/private status</span>
+          <input className="text-input" onChange={(event) => updateField("publicPrivateStatus", event.target.value)} value={intelligence.publicPrivateStatus} />
+        </label>
+        <label>
+          <span className="field-label">Source confidence</span>
+          <input
+            className="text-input"
+            max="100"
+            min="0"
+            onChange={(event) => updateField("sourceConfidence", event.target.value)}
+            type="number"
+            value={intelligence.sourceConfidence}
+          />
+        </label>
+        <label>
+          <span className="field-label">Last verified</span>
+          <input className="text-input" onChange={(event) => updateField("lastVerifiedDate", event.target.value)} type="date" value={intelligence.lastVerifiedDate} />
+        </label>
+      </div>
+      <div className="intelligence-text-grid">
+        {[
+          ["currentAuthority", "Current authority"],
+          ["historicalAuthority", "Historical authority"],
+          ["motivations", "Motivations"],
+          ["constraints", "Constraints"],
+          ["opposition", "Opposition / blockers"],
+          ["keyRelationships", "Key relationships"],
+          ["doNotDiscuss", "Do not discuss"],
+          ["bestNextMove", "Best next move"]
+        ].map(([field, label]) => (
+          <label key={field}>
+            <span className="field-label">{label}</span>
+            <textarea
+              className="text-area"
+              onChange={(event) => updateField(field as keyof EditIntelligenceState, event.target.value as never)}
+              value={String(intelligence[field as keyof EditIntelligenceState])}
+            />
+          </label>
+        ))}
+      </div>
+      <div className="record-editor-grid intelligence-form-grid">
+        <label>
+          <span className="field-label">Relevant mandates</span>
+          <input className="text-input" onChange={(event) => updateField("relevantMandates", event.target.value)} value={intelligence.relevantMandates} />
+        </label>
+        <label>
+          <span className="field-label">Relevant geographies</span>
+          <input className="text-input" onChange={(event) => updateField("relevantGeographies", event.target.value)} value={intelligence.relevantGeographies} />
+        </label>
+        <label>
+          <span className="field-label">Relevant sectors</span>
+          <input className="text-input" onChange={(event) => updateField("relevantSectors", event.target.value)} value={intelligence.relevantSectors} />
+        </label>
+        <label>
+          <span className="field-label">Relevant institutions</span>
+          <input className="text-input" onChange={(event) => updateField("relevantInstitutions", event.target.value)} value={intelligence.relevantInstitutions} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function personToEditIntelligence(person: Person): EditIntelligenceState {
+  return {
+    opposition: person.opposition ?? "",
+    trustLevel: person.trustLevel ?? "",
+    nationality: person.nationality ?? "",
+    languages: person.languages?.join(", ") ?? "",
+    publicPrivateStatus: person.publicPrivateStatus ?? "",
+    influenceType: person.influenceType ?? "",
+    accessPath: person.accessPath ?? "",
+    relationshipOwner: person.relationshipOwner ?? "",
+    bestApproach: person.bestApproach ?? "",
+    currentAuthority: person.currentAuthority ?? "",
+    historicalAuthority: person.historicalAuthority ?? "",
+    sensitivityLevel: person.sensitivityLevel ?? "",
+    motivations: person.motivations ?? "",
+    constraints: person.constraints ?? "",
+    relevantMandates: person.relevantMandates?.join(", ") ?? "",
+    relevantGeographies: person.relevantGeographies?.join(", ") ?? "",
+    relevantSectors: person.relevantSectors?.join(", ") ?? "",
+    relevantInstitutions: person.relevantInstitutions?.join(", ") ?? "",
+    keyRelationships: person.keyRelationships ?? "",
+    doNotDiscuss: person.doNotDiscuss ?? "",
+    bestNextMove: person.bestNextMove ?? "",
+    sourceConfidence: person.sourceConfidence === undefined ? "" : String(Math.round(person.sourceConfidence * 100)),
+    lastVerifiedDate: person.lastVerifiedDate ?? ""
+  };
+}
+
+function serializeEditIntelligence(intelligence: EditIntelligenceState) {
+  const confidence = Number(intelligence.sourceConfidence);
+  return {
+    opposition: intelligence.opposition,
+    trustLevel: intelligence.trustLevel,
+    nationality: intelligence.nationality,
+    languages: splitList(intelligence.languages),
+    publicPrivateStatus: intelligence.publicPrivateStatus,
+    influenceType: intelligence.influenceType,
+    accessPath: intelligence.accessPath,
+    relationshipOwner: intelligence.relationshipOwner,
+    bestApproach: intelligence.bestApproach,
+    currentAuthority: intelligence.currentAuthority,
+    historicalAuthority: intelligence.historicalAuthority,
+    sensitivityLevel: intelligence.sensitivityLevel,
+    motivations: intelligence.motivations,
+    constraints: intelligence.constraints,
+    relevantMandates: splitList(intelligence.relevantMandates),
+    relevantGeographies: splitList(intelligence.relevantGeographies),
+    relevantSectors: splitList(intelligence.relevantSectors),
+    relevantInstitutions: splitList(intelligence.relevantInstitutions),
+    keyRelationships: intelligence.keyRelationships,
+    doNotDiscuss: intelligence.doNotDiscuss,
+    bestNextMove: intelligence.bestNextMove,
+    sourceConfidence: Number.isFinite(confidence) && intelligence.sourceConfidence.trim() ? confidence / 100 : null,
+    lastVerifiedDate: intelligence.lastVerifiedDate
+  };
+}
+
+function splitList(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

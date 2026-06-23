@@ -245,6 +245,28 @@ function mapPerson(row: {
   honorific: string | null;
   aliases: string[];
   notes: string | null;
+  opposition: string | null;
+  nationality: string | null;
+  languages: string[];
+  public_private_status: string | null;
+  influence_type: string | null;
+  access_path: string | null;
+  relationship_owner: string | null;
+  best_approach: string | null;
+  current_authority: string | null;
+  historical_authority: string | null;
+  sensitivity_level: Person["sensitivityLevel"] | null;
+  motivations: string | null;
+  constraints: string | null;
+  relevant_mandates: string[];
+  relevant_geographies: string[];
+  relevant_sectors: string[];
+  relevant_institutions: string[];
+  key_relationships: string | null;
+  do_not_discuss: string | null;
+  best_next_move: string | null;
+  source_confidence: number | null;
+  last_verified_date: string | null;
   relationship_strength: number;
   trust_level: Person["trustLevel"] | null;
   warmth_status: Person["warmthStatus"];
@@ -265,6 +287,28 @@ function mapPerson(row: {
     honorific: row.honorific ?? undefined,
     aliases: row.aliases,
     notes: row.notes ?? undefined,
+    opposition: row.opposition ?? undefined,
+    nationality: row.nationality ?? undefined,
+    languages: row.languages,
+    publicPrivateStatus: row.public_private_status ?? undefined,
+    influenceType: row.influence_type ?? undefined,
+    accessPath: row.access_path ?? undefined,
+    relationshipOwner: row.relationship_owner ?? undefined,
+    bestApproach: row.best_approach ?? undefined,
+    currentAuthority: row.current_authority ?? undefined,
+    historicalAuthority: row.historical_authority ?? undefined,
+    sensitivityLevel: row.sensitivity_level ?? undefined,
+    motivations: row.motivations ?? undefined,
+    constraints: row.constraints ?? undefined,
+    relevantMandates: row.relevant_mandates,
+    relevantGeographies: row.relevant_geographies,
+    relevantSectors: row.relevant_sectors,
+    relevantInstitutions: row.relevant_institutions,
+    keyRelationships: row.key_relationships ?? undefined,
+    doNotDiscuss: row.do_not_discuss ?? undefined,
+    bestNextMove: row.best_next_move ?? undefined,
+    sourceConfidence: row.source_confidence ?? undefined,
+    lastVerifiedDate: row.last_verified_date ?? undefined,
     relationshipStrength: clampStrength(row.relationship_strength),
     trustLevel: row.trust_level ?? undefined,
     warmthStatus: row.warmth_status,
@@ -365,8 +409,67 @@ function mapMandate(row: {
   client_name: string;
   title: string;
   objective: string;
+  mandate_category: string | null;
+  deal_type: string | null;
+  ask_type: string | null;
+  transaction_type: string | null;
+  client_profile: string | null;
+  sponsor_profile: string | null;
   sector: string | null;
   geography: string[];
+  jurisdiction: string[];
+  target_counterparty_types: string[];
+  desired_counterparties: string[];
+  forbidden_contacts: string[];
+  capital_type: string | null;
+  capital_stack: string | null;
+  target_amount: string | null;
+  minimum_ticket: string | null;
+  currency: string | null;
+  economics: string | null;
+  fee_model: string | null;
+  transaction_stage: string | null;
+  timeline: string | null;
+  urgency: Mandate["urgency"] | null;
+  decision_deadline: string | null;
+  close_target_date: string | null;
+  regulatory_regime: string | null;
+  compliance_requirements: string | null;
+  sanctions_exposure: string | null;
+  political_exposure: string | null;
+  procurement_process: string | null;
+  government_touchpoints: string[];
+  required_approvals: string[];
+  decision_makers: string[];
+  gatekeepers: string[];
+  influencers: string[];
+  buyer_universe: string[];
+  investor_universe: string[];
+  strategic_partners: string[];
+  relationship_thesis: string | null;
+  access_strategy: string | null;
+  outreach_angle: string | null;
+  value_proposition: string | null;
+  proof_points: string[];
+  materials_required: string[];
+  diligence_requirements: string[];
+  data_room_status: string | null;
+  confidentiality_level: Mandate["confidentialityLevel"] | null;
+  conflict_constraints: string | null;
+  competitive_landscape: string | null;
+  incumbent_relationships: string | null;
+  risks: string | null;
+  blockers: string | null;
+  open_questions: string[];
+  success_criteria: string[];
+  disqualification_criteria: string[];
+  next_milestone: string | null;
+  owner: string | null;
+  priority: Mandate["priority"] | null;
+  source_confidence: number | null;
+  last_reviewed_date: string | null;
+  tags: string[];
+  notes: string | null;
   status: Mandate["status"];
   relevant_contacts: number;
   next_action: string | null;
@@ -376,8 +479,67 @@ function mapMandate(row: {
     clientName: row.client_name,
     title: row.title,
     objective: row.objective,
+    mandateCategory: row.mandate_category ?? undefined,
+    dealType: row.deal_type ?? undefined,
+    askType: row.ask_type ?? undefined,
+    transactionType: row.transaction_type ?? undefined,
+    clientProfile: row.client_profile ?? undefined,
+    sponsorProfile: row.sponsor_profile ?? undefined,
     sector: row.sector ?? undefined,
     geography: row.geography,
+    jurisdiction: row.jurisdiction,
+    targetCounterpartyTypes: row.target_counterparty_types,
+    desiredCounterparties: row.desired_counterparties,
+    forbiddenContacts: row.forbidden_contacts,
+    capitalType: row.capital_type ?? undefined,
+    capitalStack: row.capital_stack ?? undefined,
+    targetAmount: row.target_amount ?? undefined,
+    minimumTicket: row.minimum_ticket ?? undefined,
+    currency: row.currency ?? undefined,
+    economics: row.economics ?? undefined,
+    feeModel: row.fee_model ?? undefined,
+    transactionStage: row.transaction_stage ?? undefined,
+    timeline: row.timeline ?? undefined,
+    urgency: row.urgency ?? undefined,
+    decisionDeadline: row.decision_deadline ?? undefined,
+    closeTargetDate: row.close_target_date ?? undefined,
+    regulatoryRegime: row.regulatory_regime ?? undefined,
+    complianceRequirements: row.compliance_requirements ?? undefined,
+    sanctionsExposure: row.sanctions_exposure ?? undefined,
+    politicalExposure: row.political_exposure ?? undefined,
+    procurementProcess: row.procurement_process ?? undefined,
+    governmentTouchpoints: row.government_touchpoints,
+    requiredApprovals: row.required_approvals,
+    decisionMakers: row.decision_makers,
+    gatekeepers: row.gatekeepers,
+    influencers: row.influencers,
+    buyerUniverse: row.buyer_universe,
+    investorUniverse: row.investor_universe,
+    strategicPartners: row.strategic_partners,
+    relationshipThesis: row.relationship_thesis ?? undefined,
+    accessStrategy: row.access_strategy ?? undefined,
+    outreachAngle: row.outreach_angle ?? undefined,
+    valueProposition: row.value_proposition ?? undefined,
+    proofPoints: row.proof_points,
+    materialsRequired: row.materials_required,
+    diligenceRequirements: row.diligence_requirements,
+    dataRoomStatus: row.data_room_status ?? undefined,
+    confidentialityLevel: row.confidentiality_level ?? undefined,
+    conflictConstraints: row.conflict_constraints ?? undefined,
+    competitiveLandscape: row.competitive_landscape ?? undefined,
+    incumbentRelationships: row.incumbent_relationships ?? undefined,
+    risks: row.risks ?? undefined,
+    blockers: row.blockers ?? undefined,
+    openQuestions: row.open_questions,
+    successCriteria: row.success_criteria,
+    disqualificationCriteria: row.disqualification_criteria,
+    nextMilestone: row.next_milestone ?? undefined,
+    owner: row.owner ?? undefined,
+    priority: row.priority ?? undefined,
+    sourceConfidence: row.source_confidence ?? undefined,
+    lastReviewedDate: row.last_reviewed_date ?? undefined,
+    tags: row.tags,
+    notes: row.notes ?? undefined,
     status: row.status,
     relevantContacts: row.relevant_contacts,
     nextAction: row.next_action ?? "Define next action",

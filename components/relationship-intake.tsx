@@ -28,6 +28,57 @@ const intakeMethods = [
 ] as const;
 
 type IntakeMethod = (typeof intakeMethods)[number]["id"];
+type IntelligenceFormState = {
+  trustLevel: "" | "unknown" | "low" | "moderate" | "high" | "sensitive";
+  opposition: string;
+  nationality: string;
+  languages: string;
+  publicPrivateStatus: string;
+  influenceType: string;
+  accessPath: string;
+  relationshipOwner: string;
+  bestApproach: string;
+  currentAuthority: string;
+  historicalAuthority: string;
+  sensitivityLevel: "" | "low" | "moderate" | "high" | "sensitive";
+  motivations: string;
+  constraints: string;
+  relevantMandates: string;
+  relevantGeographies: string;
+  relevantSectors: string;
+  relevantInstitutions: string;
+  keyRelationships: string;
+  doNotDiscuss: string;
+  bestNextMove: string;
+  sourceConfidence: string;
+  lastVerifiedDate: string;
+};
+
+const emptyIntelligence: IntelligenceFormState = {
+  trustLevel: "",
+  opposition: "",
+  nationality: "",
+  languages: "",
+  publicPrivateStatus: "",
+  influenceType: "",
+  accessPath: "",
+  relationshipOwner: "",
+  bestApproach: "",
+  currentAuthority: "",
+  historicalAuthority: "",
+  sensitivityLevel: "",
+  motivations: "",
+  constraints: "",
+  relevantMandates: "",
+  relevantGeographies: "",
+  relevantSectors: "",
+  relevantInstitutions: "",
+  keyRelationships: "",
+  doNotDiscuss: "",
+  bestNextMove: "",
+  sourceConfidence: "",
+  lastVerifiedDate: ""
+};
 
 export function RelationshipIntake({ workspaceId, source }: { workspaceId?: string; source: "supabase" | "mock" }) {
   const router = useRouter();
@@ -36,6 +87,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
   const [manualOrg, setManualOrg] = useState("");
   const [manualTitle, setManualTitle] = useState("");
   const [manualNotes, setManualNotes] = useState("");
+  const [intelligence, setIntelligence] = useState<IntelligenceFormState>(emptyIntelligence);
   const [cardFile, setCardFile] = useState<File | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [contactFile, setContactFile] = useState<File | null>(null);
@@ -61,6 +113,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
         organization: manualOrg,
         title: manualTitle,
         notes: manualNotes,
+        ...serializeIntelligence(intelligence),
         cardFile,
         avatarFile
       });
@@ -68,6 +121,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
       setManualOrg("");
       setManualTitle("");
       setManualNotes("");
+      setIntelligence(emptyIntelligence);
       setCardFile(null);
       setAvatarFile(null);
       setStatus("Relationship saved.");
@@ -178,6 +232,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                     value={manualOrg}
                   />
                 </label>
+                <IntelligenceCapture intelligence={intelligence} setIntelligence={setIntelligence} />
                 {error ? <div className="form-error">{error}</div> : null}
                 {status ? <div className="form-notice">{status}</div> : null}
                 <button className="button primary" disabled={!isSupabase} type="submit">
@@ -257,6 +312,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                   type="file"
                 />
               </label>
+              <IntelligenceCapture intelligence={intelligence} setIntelligence={setIntelligence} />
               <label>
                 <span className="field-label">Relationship context</span>
                 <textarea
@@ -278,4 +334,285 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
       </div>
     </section>
   );
+}
+
+function IntelligenceCapture({
+  intelligence,
+  setIntelligence
+}: {
+  intelligence: IntelligenceFormState;
+  setIntelligence: (value: IntelligenceFormState) => void;
+}) {
+  function updateField<K extends keyof IntelligenceFormState>(field: K, value: IntelligenceFormState[K]) {
+    setIntelligence({ ...intelligence, [field]: value });
+  }
+
+  return (
+    <div className="intelligence-capture">
+      <div className="section-kicker">Relationship intelligence</div>
+      <div className="record-editor-grid intelligence-form-grid">
+        <label>
+          <span className="field-label">Influence type</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("influenceType", event.target.value)}
+            placeholder="Gatekeeper, allocator, regulator, introducer..."
+            value={intelligence.influenceType}
+          />
+        </label>
+        <label>
+          <span className="field-label">Access path</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("accessPath", event.target.value)}
+            placeholder="Direct, warm intro, chief of staff, event context..."
+            value={intelligence.accessPath}
+          />
+        </label>
+        <label>
+          <span className="field-label">Relationship owner</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("relationshipOwner", event.target.value)}
+            placeholder="Internal owner"
+            value={intelligence.relationshipOwner}
+          />
+        </label>
+        <label>
+          <span className="field-label">Best approach</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("bestApproach", event.target.value)}
+            placeholder="Formal briefing, dinner, WhatsApp, email..."
+            value={intelligence.bestApproach}
+          />
+        </label>
+        <label>
+          <span className="field-label">Sensitivity</span>
+          <select
+            className="text-input"
+            onChange={(event) => updateField("sensitivityLevel", event.target.value as IntelligenceFormState["sensitivityLevel"])}
+            value={intelligence.sensitivityLevel}
+          >
+            <option value="">Not set</option>
+            <option value="low">Low</option>
+            <option value="moderate">Moderate</option>
+            <option value="high">High</option>
+            <option value="sensitive">Sensitive</option>
+          </select>
+        </label>
+        <label>
+          <span className="field-label">Trust level</span>
+          <select
+            className="text-input"
+            onChange={(event) => updateField("trustLevel", event.target.value as IntelligenceFormState["trustLevel"])}
+            value={intelligence.trustLevel}
+          >
+            <option value="">Not set</option>
+            <option value="unknown">Unknown</option>
+            <option value="low">Low</option>
+            <option value="moderate">Moderate</option>
+            <option value="high">High</option>
+            <option value="sensitive">Sensitive</option>
+          </select>
+        </label>
+        <label>
+          <span className="field-label">Nationality</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("nationality", event.target.value)}
+            placeholder="Country or citizenship context"
+            value={intelligence.nationality}
+          />
+        </label>
+        <label>
+          <span className="field-label">Languages</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("languages", event.target.value)}
+            placeholder="English, French, Arabic"
+            value={intelligence.languages}
+          />
+        </label>
+        <label>
+          <span className="field-label">Public/private status</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("publicPrivateStatus", event.target.value)}
+            placeholder="Government, private sector, public-private bridge..."
+            value={intelligence.publicPrivateStatus}
+          />
+        </label>
+        <label>
+          <span className="field-label">Source confidence</span>
+          <input
+            className="text-input"
+            max="100"
+            min="0"
+            onChange={(event) => updateField("sourceConfidence", event.target.value)}
+            placeholder="0-100"
+            type="number"
+            value={intelligence.sourceConfidence}
+          />
+        </label>
+        <label>
+          <span className="field-label">Last verified</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("lastVerifiedDate", event.target.value)}
+            type="date"
+            value={intelligence.lastVerifiedDate}
+          />
+        </label>
+      </div>
+      <div className="intelligence-text-grid">
+        <label>
+          <span className="field-label">Current authority</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("currentAuthority", event.target.value)}
+            placeholder="What they can approve, block, introduce, validate, or influence now..."
+            value={intelligence.currentAuthority}
+          />
+        </label>
+        <label>
+          <span className="field-label">Historical authority</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("historicalAuthority", event.target.value)}
+            placeholder="Former roles, postings, or institutional authority that still matters..."
+            value={intelligence.historicalAuthority}
+          />
+        </label>
+        <label>
+          <span className="field-label">Motivations</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("motivations", event.target.value)}
+            placeholder="Strategic priorities, reputation interests, career incentives, political incentives..."
+            value={intelligence.motivations}
+          />
+        </label>
+        <label>
+          <span className="field-label">Constraints</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("constraints", event.target.value)}
+            placeholder="Compliance limits, procurement restrictions, conflicts, public narrative sensitivity..."
+            value={intelligence.constraints}
+          />
+        </label>
+        <label>
+          <span className="field-label">Opposition / blockers</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("opposition", event.target.value)}
+            placeholder="Known opponents, rival interests, political resistance, procurement concerns..."
+            value={intelligence.opposition}
+          />
+        </label>
+        <label>
+          <span className="field-label">Key relationships</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("keyRelationships", event.target.value)}
+            placeholder="Known allies, principals, assistants, rivals, sponsors, protégés..."
+            value={intelligence.keyRelationships}
+          />
+        </label>
+        <label>
+          <span className="field-label">Do not discuss</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("doNotDiscuss", event.target.value)}
+            placeholder="Topics, counterparties, asks, or sensitivities to avoid..."
+            value={intelligence.doNotDiscuss}
+          />
+        </label>
+        <label>
+          <span className="field-label">Best next move</span>
+          <textarea
+            className="text-area"
+            onChange={(event) => updateField("bestNextMove", event.target.value)}
+            placeholder="Recommended next action or ask..."
+            value={intelligence.bestNextMove}
+          />
+        </label>
+      </div>
+      <div className="record-editor-grid intelligence-form-grid">
+        <label>
+          <span className="field-label">Relevant mandates</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("relevantMandates", event.target.value)}
+            placeholder="Port Modernization, Energy Introductions"
+            value={intelligence.relevantMandates}
+          />
+        </label>
+        <label>
+          <span className="field-label">Relevant geographies</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("relevantGeographies", event.target.value)}
+            placeholder="UK, Brazil, West Africa"
+            value={intelligence.relevantGeographies}
+          />
+        </label>
+        <label>
+          <span className="field-label">Relevant sectors</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("relevantSectors", event.target.value)}
+            placeholder="Infrastructure, Energy, Logistics"
+            value={intelligence.relevantSectors}
+          />
+        </label>
+        <label>
+          <span className="field-label">Relevant institutions</span>
+          <input
+            className="text-input"
+            onChange={(event) => updateField("relevantInstitutions", event.target.value)}
+            placeholder="Ministry, fund, development bank, trade body"
+            value={intelligence.relevantInstitutions}
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function serializeIntelligence(intelligence: IntelligenceFormState) {
+  const confidence = Number(intelligence.sourceConfidence);
+  return {
+    opposition: intelligence.opposition,
+    trustLevel: intelligence.trustLevel,
+    nationality: intelligence.nationality,
+    languages: splitList(intelligence.languages),
+    publicPrivateStatus: intelligence.publicPrivateStatus,
+    influenceType: intelligence.influenceType,
+    accessPath: intelligence.accessPath,
+    relationshipOwner: intelligence.relationshipOwner,
+    bestApproach: intelligence.bestApproach,
+    currentAuthority: intelligence.currentAuthority,
+    historicalAuthority: intelligence.historicalAuthority,
+    sensitivityLevel: intelligence.sensitivityLevel,
+    motivations: intelligence.motivations,
+    constraints: intelligence.constraints,
+    relevantMandates: splitList(intelligence.relevantMandates),
+    relevantGeographies: splitList(intelligence.relevantGeographies),
+    relevantSectors: splitList(intelligence.relevantSectors),
+    relevantInstitutions: splitList(intelligence.relevantInstitutions),
+    keyRelationships: intelligence.keyRelationships,
+    doNotDiscuss: intelligence.doNotDiscuss,
+    bestNextMove: intelligence.bestNextMove,
+    sourceConfidence: Number.isFinite(confidence) && intelligence.sourceConfidence.trim() ? confidence / 100 : null,
+    lastVerifiedDate: intelligence.lastVerifiedDate
+  };
+}
+
+function splitList(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

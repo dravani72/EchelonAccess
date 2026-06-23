@@ -75,6 +75,28 @@ create table if not exists people (
   honorific text,
   aliases text[] not null default '{}',
   notes text,
+  opposition text,
+  nationality text,
+  languages text[] not null default '{}',
+  public_private_status text,
+  influence_type text,
+  access_path text,
+  relationship_owner text,
+  best_approach text,
+  current_authority text,
+  historical_authority text,
+  sensitivity_level text check (sensitivity_level in ('low','moderate','high','sensitive')),
+  motivations text,
+  constraints text,
+  relevant_mandates text[] not null default '{}',
+  relevant_geographies text[] not null default '{}',
+  relevant_sectors text[] not null default '{}',
+  relevant_institutions text[] not null default '{}',
+  key_relationships text,
+  do_not_discuss text,
+  best_next_move text,
+  source_confidence numeric,
+  last_verified_date date,
   relationship_strength int not null default 1 check (relationship_strength between 1 and 5),
   trust_level text check (trust_level in ('unknown','low','moderate','high','sensitive')),
   warmth_status text not null default 'cold' check (warmth_status in ('cold','weak','known','warm','direct')),
@@ -94,6 +116,28 @@ create table if not exists people (
 );
 
 alter table people add column if not exists avatar_url text;
+alter table people add column if not exists opposition text;
+alter table people add column if not exists nationality text;
+alter table people add column if not exists languages text[] not null default '{}';
+alter table people add column if not exists public_private_status text;
+alter table people add column if not exists influence_type text;
+alter table people add column if not exists access_path text;
+alter table people add column if not exists relationship_owner text;
+alter table people add column if not exists best_approach text;
+alter table people add column if not exists current_authority text;
+alter table people add column if not exists historical_authority text;
+alter table people add column if not exists sensitivity_level text check (sensitivity_level in ('low','moderate','high','sensitive'));
+alter table people add column if not exists motivations text;
+alter table people add column if not exists constraints text;
+alter table people add column if not exists relevant_mandates text[] not null default '{}';
+alter table people add column if not exists relevant_geographies text[] not null default '{}';
+alter table people add column if not exists relevant_sectors text[] not null default '{}';
+alter table people add column if not exists relevant_institutions text[] not null default '{}';
+alter table people add column if not exists key_relationships text;
+alter table people add column if not exists do_not_discuss text;
+alter table people add column if not exists best_next_move text;
+alter table people add column if not exists source_confidence numeric;
+alter table people add column if not exists last_verified_date date;
 
 create table if not exists roles (
   id uuid primary key default gen_random_uuid(),
@@ -140,10 +184,66 @@ create table if not exists mandates (
   client_name text not null,
   title text not null,
   objective text not null,
+  mandate_category text,
+  deal_type text,
+  ask_type text,
+  transaction_type text,
+  client_profile text,
+  sponsor_profile text,
   sector text,
   geography text[] not null default '{}',
+  jurisdiction text[] not null default '{}',
+  target_counterparty_types text[] not null default '{}',
   desired_counterparties text[] not null default '{}',
   forbidden_contacts text[] not null default '{}',
+  capital_type text,
+  capital_stack text,
+  target_amount text,
+  minimum_ticket text,
+  currency text,
+  economics text,
+  fee_model text,
+  transaction_stage text,
+  timeline text,
+  urgency text check (urgency in ('low','medium','high','critical')),
+  decision_deadline date,
+  close_target_date date,
+  regulatory_regime text,
+  compliance_requirements text,
+  sanctions_exposure text,
+  political_exposure text,
+  procurement_process text,
+  government_touchpoints text[] not null default '{}',
+  required_approvals text[] not null default '{}',
+  decision_makers text[] not null default '{}',
+  gatekeepers text[] not null default '{}',
+  influencers text[] not null default '{}',
+  buyer_universe text[] not null default '{}',
+  investor_universe text[] not null default '{}',
+  strategic_partners text[] not null default '{}',
+  relationship_thesis text,
+  access_strategy text,
+  outreach_angle text,
+  value_proposition text,
+  proof_points text[] not null default '{}',
+  materials_required text[] not null default '{}',
+  diligence_requirements text[] not null default '{}',
+  data_room_status text,
+  confidentiality_level text check (confidentiality_level in ('standard','confidential','highly_confidential','restricted')),
+  conflict_constraints text,
+  competitive_landscape text,
+  incumbent_relationships text,
+  risks text,
+  blockers text,
+  open_questions text[] not null default '{}',
+  success_criteria text[] not null default '{}',
+  disqualification_criteria text[] not null default '{}',
+  next_milestone text,
+  owner text,
+  priority text check (priority in ('low','medium','high','critical')),
+  source_confidence numeric,
+  last_reviewed_date date,
+  tags text[] not null default '{}',
   status text not null default 'draft' check (status in ('draft','researching','active','paused','completed','dead')),
   relevant_contacts int not null default 0,
   next_action text,
@@ -153,6 +253,65 @@ create table if not exists mandates (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table mandates add column if not exists mandate_category text;
+alter table mandates add column if not exists deal_type text;
+alter table mandates add column if not exists ask_type text;
+alter table mandates add column if not exists transaction_type text;
+alter table mandates add column if not exists client_profile text;
+alter table mandates add column if not exists sponsor_profile text;
+alter table mandates add column if not exists jurisdiction text[] not null default '{}';
+alter table mandates add column if not exists target_counterparty_types text[] not null default '{}';
+alter table mandates add column if not exists desired_counterparties text[] not null default '{}';
+alter table mandates add column if not exists forbidden_contacts text[] not null default '{}';
+alter table mandates add column if not exists capital_type text;
+alter table mandates add column if not exists capital_stack text;
+alter table mandates add column if not exists target_amount text;
+alter table mandates add column if not exists minimum_ticket text;
+alter table mandates add column if not exists currency text;
+alter table mandates add column if not exists economics text;
+alter table mandates add column if not exists fee_model text;
+alter table mandates add column if not exists transaction_stage text;
+alter table mandates add column if not exists timeline text;
+alter table mandates add column if not exists urgency text check (urgency in ('low','medium','high','critical'));
+alter table mandates add column if not exists decision_deadline date;
+alter table mandates add column if not exists close_target_date date;
+alter table mandates add column if not exists regulatory_regime text;
+alter table mandates add column if not exists compliance_requirements text;
+alter table mandates add column if not exists sanctions_exposure text;
+alter table mandates add column if not exists political_exposure text;
+alter table mandates add column if not exists procurement_process text;
+alter table mandates add column if not exists government_touchpoints text[] not null default '{}';
+alter table mandates add column if not exists required_approvals text[] not null default '{}';
+alter table mandates add column if not exists decision_makers text[] not null default '{}';
+alter table mandates add column if not exists gatekeepers text[] not null default '{}';
+alter table mandates add column if not exists influencers text[] not null default '{}';
+alter table mandates add column if not exists buyer_universe text[] not null default '{}';
+alter table mandates add column if not exists investor_universe text[] not null default '{}';
+alter table mandates add column if not exists strategic_partners text[] not null default '{}';
+alter table mandates add column if not exists relationship_thesis text;
+alter table mandates add column if not exists access_strategy text;
+alter table mandates add column if not exists outreach_angle text;
+alter table mandates add column if not exists value_proposition text;
+alter table mandates add column if not exists proof_points text[] not null default '{}';
+alter table mandates add column if not exists materials_required text[] not null default '{}';
+alter table mandates add column if not exists diligence_requirements text[] not null default '{}';
+alter table mandates add column if not exists data_room_status text;
+alter table mandates add column if not exists confidentiality_level text check (confidentiality_level in ('standard','confidential','highly_confidential','restricted'));
+alter table mandates add column if not exists conflict_constraints text;
+alter table mandates add column if not exists competitive_landscape text;
+alter table mandates add column if not exists incumbent_relationships text;
+alter table mandates add column if not exists risks text;
+alter table mandates add column if not exists blockers text;
+alter table mandates add column if not exists open_questions text[] not null default '{}';
+alter table mandates add column if not exists success_criteria text[] not null default '{}';
+alter table mandates add column if not exists disqualification_criteria text[] not null default '{}';
+alter table mandates add column if not exists next_milestone text;
+alter table mandates add column if not exists owner text;
+alter table mandates add column if not exists priority text check (priority in ('low','medium','high','critical'));
+alter table mandates add column if not exists source_confidence numeric;
+alter table mandates add column if not exists last_reviewed_date date;
+alter table mandates add column if not exists tags text[] not null default '{}';
 
 create table if not exists interactions (
   id uuid primary key default gen_random_uuid(),

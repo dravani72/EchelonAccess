@@ -143,6 +143,22 @@ function IdentityCard({ person }: { person: Person }) {
           <div className="field-value">{person.sourceCount} sources</div>
         </div>
         <div>
+          <div className="field-label">Influence Type</div>
+          <div className="field-value">{person.influenceType ?? "Not classified"}</div>
+        </div>
+        <div>
+          <div className="field-label">Access Path</div>
+          <div className="field-value">{person.accessPath ?? "No access path recorded."}</div>
+        </div>
+        <div>
+          <div className="field-label">Relationship Owner</div>
+          <div className="field-value">{person.relationshipOwner ?? "Unassigned"}</div>
+        </div>
+        <div>
+          <div className="field-label">Opposition / Blockers</div>
+          <div className="field-value">{person.opposition ?? "No opposition recorded."}</div>
+        </div>
+        <div>
           <div className="field-label">Private Note</div>
           <div className="field-value">{person.notes ?? "No note recorded."}</div>
         </div>
@@ -166,10 +182,50 @@ function OverviewTab({ person, roles, interactions }: { person: Person; roles: R
         <Badge tone="blue">{person.relationshipStrength}/5 strength</Badge>
         <Badge tone="purple">{person.mandateMatches} mandate matches</Badge>
         <Badge tone={person.reviewStatus === "verified" ? "green" : "amber"}>{formatStatus(person.reviewStatus)}</Badge>
+        {person.sensitivityLevel ? <Badge tone={person.sensitivityLevel === "sensitive" ? "red" : "amber"}>{formatStatus(person.sensitivityLevel)}</Badge> : null}
       </div>
+      <IntelligenceGrid person={person} />
       <RolesTab roles={roles.slice(0, 3)} compact />
       <TimelineTab interactions={interactions.slice(0, 3)} compact />
     </>
+  );
+}
+
+function IntelligenceGrid({ person }: { person: Person }) {
+  const rows = [
+    ["Best Approach", person.bestApproach],
+    ["Current Authority", person.currentAuthority],
+    ["Historical Authority", person.historicalAuthority],
+    ["Motivations", person.motivations],
+    ["Constraints", person.constraints],
+    ["Opposition", person.opposition],
+    ["Key Relationships", person.keyRelationships],
+    ["Do Not Discuss", person.doNotDiscuss],
+    ["Best Next Move", person.bestNextMove],
+    ["Nationality", person.nationality],
+    ["Languages", person.languages?.join(", ")],
+    ["Public/Private Status", person.publicPrivateStatus],
+    ["Relevant Mandates", person.relevantMandates?.join(", ")],
+    ["Relevant Geographies", person.relevantGeographies?.join(", ")],
+    ["Relevant Sectors", person.relevantSectors?.join(", ")],
+    ["Relevant Institutions", person.relevantInstitutions?.join(", ")],
+    ["Source Confidence", person.sourceConfidence === undefined ? undefined : confidenceLabel(person.sourceConfidence)],
+    ["Last Verified", person.lastVerifiedDate]
+  ].filter(([, value]) => value);
+
+  if (!rows.length) {
+    return <EmptyState text="No structured relationship intelligence recorded yet." />;
+  }
+
+  return (
+    <div className="dossier-grid intelligence-display-grid">
+      {rows.map(([label, value]) => (
+        <div className="review-section" key={label}>
+          <div className="field-label">{label}</div>
+          <div className="field-value">{value}</div>
+        </div>
+      ))}
+    </div>
   );
 }
 
