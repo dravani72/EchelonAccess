@@ -15,9 +15,9 @@ export default async function Home() {
         <div className="page" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
           <div className="stack">
             <section>
-              <h1 className="section-title">Relationship Intelligence Desk</h1>
+              <h1 className="section-title">Network Intermediation Desk</h1>
               <p className="section-kicker">
-                Source-aware dossiers, mandate matching, graph paths, and reviewed outreach for strategic access.
+                Build introductions across mutual interests, mandate overlap, data parities, and credible access paths.
               </p>
             </section>
 
