@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
 import { withBasePath } from "@/lib/base-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getSupabaseConfigStatus } from "@/lib/supabase/config";
@@ -18,6 +18,7 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const configStatus = getSupabaseConfigStatus();
@@ -61,37 +62,66 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
     event.preventDefault();
     setError("");
     setNotice("");
+    setIsSubmitting(true);
 
     if (configError) {
       setError(configError);
+      setIsSubmitting(false);
       return;
     }
 
     if (isSupabaseMode) {
       const supabase = createSupabaseBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}${withBasePath("/auth/callback")}`
-        }
-      });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (signInError) {
         setError(signInError.message);
+        setIsSubmitting(false);
         return;
       }
 
-      setNotice("Check your email for a secure login link.");
+      setNotice("Signed in. Opening workspace...");
+      setIsUnlocked(true);
+      router.refresh();
+      setIsSubmitting(false);
       return;
     }
 
     if (password.trim() !== DEMO_PASSWORD) {
       setError("Password not recognized.");
+      setIsSubmitting(false);
       return;
     }
 
     window.sessionStorage.setItem("echelon-unlocked", "true");
     setIsUnlocked(true);
+    setIsSubmitting(false);
+  }
+
+  async function handlePasswordReset() {
+    setError("");
+    setNotice("");
+
+    if (!email.trim()) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const supabase = createSupabaseBrowserClient();
+    const nextPath = withBasePath("/auth/update-password");
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}${withBasePath("/auth/callback")}?next=${encodeURIComponent(nextPath)}`
+    });
+
+    setIsSubmitting(false);
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+
+    setNotice("Check your email for a password setup link.");
   }
 
   if (isUnlocked) {
@@ -134,6 +164,22 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
                   value={email}
                 />
               </label>
+            ) : null}
+            {isSupabaseMode ? (
+              <label>
+                <span className="field-label">Password</span>
+                <input
+                  autoComplete="current-password"
+                  className="text-input"
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setError("");
+                  }}
+                  placeholder="Enter password"
+                  type="password"
+                  value={password}
+                />
+              </label>
             ) : (
               <label>
                 <span className="field-label">Workspace password</span>
@@ -153,10 +199,15 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
             )}
             {error ? <div className="form-error">{error}</div> : null}
             {notice ? <div className="form-notice">{notice}</div> : null}
-            <button className="button primary lock-button" type="submit">
-              {isSupabaseMode ? <Mail size={16} /> : <ShieldCheck size={16} />}
-              {isSupabaseMode ? "Send login link" : "Unlock"}
+            <button className="button primary lock-button" disabled={isSubmitting} type="submit">
+              {isSupabaseMode ? <KeyRound size={16} /> : <ShieldCheck size={16} />}
+              {isSubmitting ? "Working..." : isSupabaseMode ? "Sign in" : "Unlock"}
             </button>
+            {isSupabaseMode ? (
+              <button className="button secondary lock-button" disabled={isSubmitting} onClick={handlePasswordReset} type="button">
+                Set or reset password
+              </button>
+            ) : null}
           </form>
         )}
 
@@ -164,7 +215,7 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
           {configError
             ? "Fix the Netlify environment variables, then clear cache and redeploy."
             : isSupabaseMode
-              ? "Supabase Auth protects each workspace."
+              ? "Use the password setup link once, then sign in with email and password."
               : `Demo password: ${DEMO_PASSWORD}`}
         </div>
       </section>
