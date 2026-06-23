@@ -8,22 +8,22 @@
 do $$
 declare
   owner_user_id uuid := '00000000-0000-0000-0000-000000000000';
-  workspace_id uuid := gen_random_uuid();
+  seeded_workspace_id uuid := gen_random_uuid();
 begin
   if owner_user_id = '00000000-0000-0000-0000-000000000000' then
     raise exception 'Replace owner_user_id in supabase/seed.sql with a real Supabase auth.users.id before running.';
   end if;
 
   insert into workspaces (id, name, slug, owner_id)
-  values (workspace_id, 'Private Relationship Desk', 'private-relationship-desk', owner_user_id)
+  values (seeded_workspace_id, 'Private Relationship Desk', 'private-relationship-desk', owner_user_id)
   on conflict (slug) do update
     set name = excluded.name,
         owner_id = excluded.owner_id,
         updated_at = now()
-  returning id into workspace_id;
+  returning id into seeded_workspace_id;
 
   insert into workspace_members (workspace_id, user_id, role)
-  values (workspace_id, owner_user_id, 'owner')
+  values (seeded_workspace_id, owner_user_id, 'owner')
   on conflict (workspace_id, user_id) do update
     set role = excluded.role;
 
@@ -32,7 +32,7 @@ begin
   ) values
   (
     '10000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     'Northbridge Capital',
     'northbridge capital',
     'fund',
@@ -43,7 +43,7 @@ begin
   ),
   (
     '10000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     'Ministry of Trade, Brazil',
     'ministry of trade brazil',
     'government',
@@ -54,7 +54,7 @@ begin
   ),
   (
     '10000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     'Harborline Growth',
     'harborline growth',
     'fund',
@@ -82,7 +82,7 @@ begin
   ) values
   (
     '00000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     'Amelia Hart',
     'Amelia Hart',
     array['A. Hart'],
@@ -101,7 +101,7 @@ begin
   ),
   (
     '00000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     'Rafael Santos',
     'Rafael Santos',
     array['Rafa Santos'],
@@ -120,7 +120,7 @@ begin
   ),
   (
     '00000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     'Maya Chen',
     'Maya Chen',
     array[]::text[],
@@ -139,7 +139,7 @@ begin
   ),
   (
     '00000000-0000-4000-8000-000000000004',
-    workspace_id,
+    seeded_workspace_id,
     'James Okafor',
     'James Okafor',
     array['J. Okafor'],
@@ -181,7 +181,7 @@ begin
   ) values
   (
     '20000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000001',
     'Northbridge Capital',
@@ -194,7 +194,7 @@ begin
   ),
   (
     '20000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     null,
     'UK Department for Business and Trade',
@@ -207,7 +207,7 @@ begin
   ),
   (
     '20000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     null,
     'Helios Energy Group',
@@ -237,7 +237,7 @@ begin
   ) values
   (
     '30000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     '2026-05-18',
     'call',
@@ -249,7 +249,7 @@ begin
   ),
   (
     '30000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     '2025-10-04',
     'event',
@@ -261,7 +261,7 @@ begin
   ),
   (
     '30000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     '2012-01-01',
     'note',
@@ -289,7 +289,7 @@ begin
   ) values
   (
     '40000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     'Confidential infrastructure client',
     'Port Modernization Capital Path',
     'Identify warm government and fund counterparties for port modernization financing.',
@@ -301,7 +301,7 @@ begin
   ),
   (
     '40000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     'Energy transition sponsor',
     'Latin America Energy Introductions',
     'Map trade and energy-policy access points for regional expansion.',
@@ -313,7 +313,7 @@ begin
   ),
   (
     '40000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     'APAC logistics operator',
     'Strategic Growth Equity Access',
     'Find investor and sovereign logistics paths across Singapore and Indonesia.',
@@ -342,7 +342,7 @@ begin
   ) values
   (
     '50000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000001',
     '40000000-0000-4000-8000-000000000001',
     'Amelia Hart',
@@ -356,7 +356,7 @@ begin
   ),
   (
     '50000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000002',
     '40000000-0000-4000-8000-000000000002',
     'Rafael Santos',
@@ -370,7 +370,7 @@ begin
   ),
   (
     '50000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     '00000000-0000-4000-8000-000000000004',
     '40000000-0000-4000-8000-000000000001',
     'James Okafor',
@@ -400,21 +400,21 @@ begin
   insert into review_tasks (id, workspace_id, title, detail, status) values
   (
     '60000000-0000-4000-8000-000000000001',
-    workspace_id,
+    seeded_workspace_id,
     'Rafael Santos role change',
     'Public profile suggests new ministry title; preserve prior private-sector card role.',
     'needs_review'
   ),
   (
     '60000000-0000-4000-8000-000000000002',
-    workspace_id,
+    seeded_workspace_id,
     'James Okafor duplicate',
     'Two card scans share phone number but differ by organization and date.',
     'suggested'
   ),
   (
     '60000000-0000-4000-8000-000000000003',
-    workspace_id,
+    seeded_workspace_id,
     'Maya Chen stale contact',
     'Known contact with active APAC mandate relevance and no interaction in 7 months.',
     'stale'
