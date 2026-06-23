@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
 import { getAppOrigin, withBasePath } from "@/lib/base-path";
@@ -11,8 +11,6 @@ const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "echelon";
 
 export function AccessGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const routerRef = useRef(router);
-  routerRef.current = router;
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isSupabaseMode, setIsSupabaseMode] = useState(false);
   const [configError, setConfigError] = useState("");
@@ -42,12 +40,16 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
 
     const supabase = createSupabaseBrowserClient();
 
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsUnlocked(Boolean(session));
+    });
+
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setIsUnlocked(Boolean(session));
-      if (session) {
-        routerRef.current.refresh();
+      if (event === "SIGNED_OUT") {
+        router.refresh();
       }
     });
 
