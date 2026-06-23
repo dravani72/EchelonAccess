@@ -16,6 +16,7 @@ import {
   Users
 } from "lucide-react";
 import { OfflineStatus } from "@/components/offline-status";
+import { SignOutButton } from "@/components/sign-out-button";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
@@ -72,6 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Review queue
           </button>
           <OfflineStatus />
+          <SignOutButton />
           <a className="button primary" href="#Add Relationship">
             <Plus size={16} />
             Add
