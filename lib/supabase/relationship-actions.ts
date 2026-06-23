@@ -141,6 +141,10 @@ export async function stageContactImport(workspaceId: string, file: File) {
   });
 
   if (error) {
+    if (error.message.toLowerCase().includes("bucket not found")) {
+      throw new Error("Storage bucket relationship-artifacts was not found. Run supabase/storage.sql in Supabase SQL Editor.");
+    }
+
     throw new Error(error.message);
   }
 
