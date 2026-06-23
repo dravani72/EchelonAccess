@@ -4,6 +4,7 @@ publish = ".next"
 
 [build.environment]
 NEXT_PUBLIC_BASE_PATH = "/app"
+NEXT_PUBLIC_APP_ORIGIN = "https://echelonaccess.netlify.app"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"

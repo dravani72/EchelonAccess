@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
-import { withBasePath } from "@/lib/base-path";
+import { getAppOrigin, withBasePath } from "@/lib/base-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getSupabaseConfigStatus } from "@/lib/supabase/config";
 
@@ -110,8 +110,9 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
     setIsSubmitting(true);
     const supabase = createSupabaseBrowserClient();
     const nextPath = withBasePath("/auth/update-password");
+    const appOrigin = getAppOrigin();
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}${withBasePath("/auth/callback")}?next=${encodeURIComponent(nextPath)}`
+      redirectTo: `${appOrigin}${withBasePath("/auth/callback")}?next=${encodeURIComponent(nextPath)}`
     });
 
     setIsSubmitting(false);
