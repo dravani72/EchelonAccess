@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createColumnHelper,
@@ -121,6 +121,7 @@ export function PeopleTable({
   source: "supabase" | "mock";
 }) {
   const router = useRouter();
+  const editorRef = useRef<HTMLDivElement>(null);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
   const [selectedScopeId, setSelectedScopeId] = useState("all");
   const [query, setQuery] = useState("");
@@ -223,6 +224,9 @@ export function PeopleTable({
     setEditIntelligence(personToEditIntelligence(person));
     setStatus("");
     setError("");
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   async function handleSaveEdit() {
@@ -343,7 +347,7 @@ export function PeopleTable({
         </div>
       </div>
       {editingPerson ? (
-        <div className={`record-editor ${editingPerson.isMockData ? "mock-record" : ""}`}>
+        <div className={`record-editor ${editingPerson.isMockData ? "mock-record" : ""}`} ref={editorRef}>
           <div className="record-editor-grid">
             <label>
               <span className="field-label">Name</span>
@@ -432,10 +436,22 @@ export function PeopleTable({
                   ))}
                   <td>
                     <div className="table-actions">
-                      <button className="button icon-button" disabled={source !== "supabase"} onClick={() => beginEdit(row.original)} type="button">
+                      <button
+                        aria-label={`Edit ${row.original.displayName}`}
+                        className="button icon-button"
+                        onClick={() => beginEdit(row.original)}
+                        title={source === "supabase" ? "Edit relationship" : "Open editor"}
+                        type="button"
+                      >
                         <Pencil size={15} />
                       </button>
-                      <button className="button icon-button" disabled={source !== "supabase"} onClick={() => handleDelete(row.original)} type="button">
+                      <button
+                        aria-label={`Delete ${row.original.displayName}`}
+                        className="button icon-button"
+                        onClick={() => handleDelete(row.original)}
+                        title={source === "supabase" ? "Delete relationship" : "Try delete"}
+                        type="button"
+                      >
                         <Trash2 size={15} />
                       </button>
                     </div>
