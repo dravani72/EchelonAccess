@@ -79,6 +79,7 @@ const views: { id: WorkspaceView; label: string }[] = [
 
 const hashViewMap: Record<string, WorkspaceView> = {
   graph: "network",
+  opportunities: "opportunities",
   people: "people",
   dossier: "dossier",
   mandates: "mandates",
@@ -131,6 +132,9 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
           <Badge tone="blue">{counts.people} people</Badge>
           <Badge tone="purple">{counts.mandates} mandates</Badge>
           <Badge tone="green">Intro paths on demand</Badge>
+          <a className="button" href={withBasePath("/mandates/new")}>
+            Define mandate
+          </a>
           <a className="button primary" href={withBasePath("/relationships/new")}>
             Define relationship
           </a>
