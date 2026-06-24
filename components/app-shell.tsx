@@ -1,7 +1,8 @@
+"use client";
+
 import {
   Bell,
   Building2,
-  Clock3,
   Command,
   ContactRound,
   FileStack,
@@ -10,32 +11,146 @@ import {
   Network,
   Plus,
   Search,
-  Settings,
   Sparkles,
   SquarePen,
   Users
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { withBasePath } from "@/lib/base-path";
 import { OfflineStatus } from "@/components/offline-status";
 import { SignOutButton } from "@/components/sign-out-button";
 
-const navItems = [
-  { id: "dashboard", label: "Network Desk", icon: LayoutDashboard, href: "/" },
-  { id: "add", label: "Add Relationship", icon: SquarePen, href: "/relationships/new" },
-  { id: "define-mandate", label: "Add Mandate", icon: GitBranch, href: "/mandates/new" },
-  { id: "people", label: "People", icon: Users, href: "/#people" },
-  { id: "organizations", label: "Organizations", icon: Building2, href: "/#organizations" },
-  { id: "cards", label: "Business Cards", icon: FileStack, href: "/#cards" },
-  { id: "mandates", label: "Mandates", icon: GitBranch, href: "/#mandates" },
-  { id: "graph", label: "Relationship Graph", icon: Network, href: "/#graph" },
-  { id: "outreach", label: "Outreach Queue", icon: ContactRound, href: "/#outreach" },
-  { id: "timeline", label: "Timeline", icon: Clock3, href: "/#timeline" },
-  { id: "settings", label: "Settings", icon: Settings, href: "/#settings" }
+const workspaceItems = [
+  { id: "dashboard", label: "Network Desk", icon: LayoutDashboard, href: "/#graph", meta: "Map" },
+  { id: "opportunities", label: "Intro Paths", icon: Network, href: "/#opportunities", meta: "Score" },
+  { id: "people", label: "People", icon: Users, href: "/#people", meta: "Edit" },
+  { id: "dossier", label: "Dossier", icon: FileStack, href: "/#dossier", meta: "Inspect" },
+  { id: "mandates", label: "Mandates", icon: GitBranch, href: "/#mandates", meta: "Define" },
+  { id: "organizations", label: "Organizations", icon: Building2, href: "/#organizations", meta: "Scope" },
+  { id: "outreach", label: "Outreach", icon: ContactRound, href: "/#outreach", meta: "Queue" }
 ];
 
+const actionItems = [
+  { id: "add", label: "New Relationship", icon: SquarePen, href: "/relationships/new", tone: "blue" },
+  { id: "define-mandate", label: "New Mandate", icon: GitBranch, href: "/mandates/new", tone: "purple" }
+];
+
+const hashSectionMap: Record<string, string> = {
+  graph: "dashboard",
+  opportunities: "opportunities",
+  people: "people",
+  dossier: "dossier",
+  mandates: "mandates",
+  organizations: "organizations",
+  outreach: "outreach"
+};
+
+const sidebarStyles = `
+  .nav {
+    gap: 18px;
+  }
+
+  .nav-section {
+    display: grid;
+    gap: 6px;
+  }
+
+  .nav-section-title {
+    color: var(--subtle);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .nav-item {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 9px;
+    border: 1px solid transparent;
+    padding: 8px 9px;
+  }
+
+  .nav-item.active,
+  .nav-item:hover {
+    border-color: rgba(105, 167, 255, 0.28);
+    background: rgba(105, 167, 255, 0.08);
+  }
+
+  .nav-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    color: var(--blue);
+    background: rgba(105, 167, 255, 0.07);
+  }
+
+  .nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-meta {
+    color: var(--subtle);
+    font-size: 11px;
+  }
+
+  .nav-action-section {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 14px;
+  }
+
+  .nav-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0 11px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .nav-action-blue {
+    border-color: rgba(105, 167, 255, 0.42);
+    background: rgba(105, 167, 255, 0.1);
+  }
+
+  .nav-action-purple {
+    border-color: rgba(185, 149, 255, 0.42);
+    background: rgba(185, 149, 255, 0.1);
+  }
+
+  .nav-action.active,
+  .nav-action:hover {
+    filter: brightness(1.12);
+  }
+`;
+
 export function AppShell({ activeSection = "dashboard", children }: { activeSection?: string; children: React.ReactNode }) {
+  const [currentSection, setCurrentSection] = useState(activeSection);
+
+  useEffect(() => {
+    function syncActiveSection() {
+      const hash = window.location.hash.replace("#", "");
+      setCurrentSection(hashSectionMap[hash] ?? activeSection);
+    }
+
+    syncActiveSection();
+    window.addEventListener("hashchange", syncActiveSection);
+    return () => window.removeEventListener("hashchange", syncActiveSection);
+  }, [activeSection]);
+
   return (
     <div className="app-shell">
+      <style>{sidebarStyles}</style>
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">
@@ -48,12 +163,32 @@ export function AppShell({ activeSection = "dashboard", children }: { activeSect
         </div>
 
         <nav className="nav" aria-label="Primary">
-          {navItems.map((item) => (
-            <a className={`nav-item ${activeSection === item.id ? "active" : ""}`} href={withBasePath(item.href)} key={item.label}>
-              <item.icon size={17} />
-              <span>{item.label}</span>
-            </a>
-          ))}
+          <div className="nav-section">
+            <div className="nav-section-title">Workspace</div>
+            {workspaceItems.map((item) => (
+              <a className={`nav-item ${currentSection === item.id ? "active" : ""}`} href={withBasePath(item.href)} key={item.label}>
+                <span className="nav-icon">
+                  <item.icon size={16} />
+                </span>
+                <span className="nav-label">{item.label}</span>
+                <span className="nav-meta">{item.meta}</span>
+              </a>
+            ))}
+          </div>
+
+          <div className="nav-section nav-action-section">
+            <div className="nav-section-title">Create</div>
+            {actionItems.map((item) => (
+              <a
+                className={`nav-action nav-action-${item.tone} ${currentSection === item.id ? "active" : ""}`}
+                href={withBasePath(item.href)}
+                key={item.label}
+              >
+                <item.icon size={17} />
+                <span>{item.label}</span>
+              </a>
+            ))}
+          </div>
         </nav>
 
         <div className="workspace-note">
@@ -70,10 +205,10 @@ export function AppShell({ activeSection = "dashboard", children }: { activeSect
               <Command size={11} /> K
             </span>
           </label>
-          <button className="button" type="button">
+          <a className="button" href={withBasePath("/#outreach")}>
             <Bell size={16} />
             Review queue
-          </button>
+          </a>
           <OfflineStatus />
           <SignOutButton />
           <a className="button primary" href={withBasePath("/relationships/new")}>
