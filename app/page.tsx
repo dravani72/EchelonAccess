@@ -1,5 +1,6 @@
 import { AccessGate } from "@/components/access-gate";
 import { AppShell } from "@/components/app-shell";
+import { IntelligenceRail } from "@/components/intelligence-rail";
 import { Metrics } from "@/components/metrics";
 import { ResponsiveWorkspace } from "@/components/responsive-workspace";
 import { getAppData } from "@/lib/data";
@@ -12,7 +13,7 @@ export default async function Home() {
   return (
     <AccessGate>
       <AppShell>
-        <div className="page" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
+        <div className="page">
           <div className="stack">
             <section>
               <h1 className="section-title">Network Intermediation Desk</h1>
@@ -24,6 +25,7 @@ export default async function Home() {
             <Metrics data={data} />
             <ResponsiveWorkspace data={data} />
           </div>
+          <IntelligenceRail data={data} />
         </div>
       </AppShell>
     </AccessGate>
