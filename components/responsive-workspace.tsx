@@ -28,6 +28,10 @@ const OutreachQueue = dynamic(() => import("@/components/outreach-queue").then((
   ssr: false,
   loading: () => <PanelLoading label="Loading outreach" />
 });
+const RelationshipGraph = dynamic(() => import("@/components/relationship-graph").then((mod) => mod.RelationshipGraph), {
+  ssr: false,
+  loading: () => <PanelLoading label="Loading graph" />
+});
 
 type WorkspaceView = "network" | "opportunities" | "people" | "dossier" | "mandates" | "organizations" | "outreach";
 type SharedCluster = {
@@ -182,6 +186,8 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
 function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: NetworkIntelligence }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
+      <RelationshipGraph data={data} />
+
       <div className="review-section">
         <div className="field-label">Operating Model</div>
         <div className="field-value">
