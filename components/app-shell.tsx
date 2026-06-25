@@ -15,8 +15,8 @@ import {
   SquarePen,
   Users
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { withBasePath } from "@/lib/base-path";
+import { type MouseEvent, useEffect, useState } from "react";
+import { BASE_PATH, withBasePath } from "@/lib/base-path";
 import { OfflineStatus } from "@/components/offline-status";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -137,6 +137,20 @@ const sidebarStyles = `
 export function AppShell({ activeSection = "dashboard", children }: { activeSection?: string; children: React.ReactNode }) {
   const [currentSection, setCurrentSection] = useState(activeSection);
 
+  function handleWorkspaceNavigation(event: MouseEvent<HTMLAnchorElement>, hash: string) {
+    const normalizedBasePath = BASE_PATH || "";
+    const currentPath = window.location.pathname;
+    const isHomePath = currentPath === `${normalizedBasePath}/` || currentPath === normalizedBasePath || currentPath === "/";
+
+    if (!isHomePath) return;
+
+    event.preventDefault();
+    if (window.location.hash !== hash) {
+      window.history.pushState(null, "", hash);
+    }
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  }
+
   useEffect(() => {
     function syncActiveSection() {
       const hash = window.location.hash.replace("#", "");
@@ -166,7 +180,12 @@ export function AppShell({ activeSection = "dashboard", children }: { activeSect
           <div className="nav-section">
             <div className="nav-section-title">Workspace</div>
             {workspaceItems.map((item) => (
-              <a className={`nav-item ${currentSection === item.id ? "active" : ""}`} href={withBasePath(item.href)} key={item.label}>
+              <a
+                className={`nav-item ${currentSection === item.id ? "active" : ""}`}
+                href={withBasePath(item.href)}
+                key={item.label}
+                onClick={(event) => handleWorkspaceNavigation(event, item.href.replace("/", ""))}
+              >
                 <span className="nav-icon">
                   <item.icon size={16} />
                 </span>
@@ -205,7 +224,7 @@ export function AppShell({ activeSection = "dashboard", children }: { activeSect
               <Command size={11} /> K
             </span>
           </label>
-          <a className="button" href={withBasePath("/#outreach")}>
+          <a className="button" href={withBasePath("/#outreach")} onClick={(event) => handleWorkspaceNavigation(event, "#outreach")}>
             <Bell size={16} />
             Review queue
           </a>
