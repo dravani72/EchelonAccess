@@ -118,7 +118,7 @@ export function IntelligenceRail({ data }: { data: AppData }) {
           <h3>Data Source</h3>
         </div>
         <p>{data.source === "supabase" ? data.diagnostic ?? `Connected: ${data.currentWorkspace?.name ?? "Workspace"}.` : "Supabase unavailable."}</p>
-        <a className="rail-link" href={withBasePath("/#graph")}>
+        <a className="rail-link" href="#graph">
           Open desk <ArrowRight size={14} />
         </a>
       </div>
@@ -172,7 +172,7 @@ export function IntelligenceRail({ data }: { data: AppData }) {
           ))}
           {!data.reviewTasks.length ? <div className="empty-state">No review tasks.</div> : null}
         </div>
-        <a className="rail-link" href={withBasePath("/#outreach")}>
+        <a className="rail-link" href="#outreach">
           Review outreach <ArrowRight size={14} />
         </a>
       </div>
