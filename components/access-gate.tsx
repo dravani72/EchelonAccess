@@ -12,6 +12,7 @@ const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "echelon";
 export function AccessGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [isSupabaseMode, setIsSupabaseMode] = useState(false);
   const [configError, setConfigError] = useState("");
   const [email, setEmail] = useState("");
@@ -30,19 +31,28 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
 
     if (isBlockedByConfig) {
       setIsUnlocked(false);
+      setIsCheckingAccess(false);
       return;
     }
 
     if (!useSupabase) {
       setIsUnlocked(window.sessionStorage.getItem("echelon-unlocked") === "true");
+      setIsCheckingAccess(false);
       return;
     }
 
     const supabase = createSupabaseBrowserClient();
 
-    void supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsUnlocked(Boolean(session));
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setIsUnlocked(Boolean(session));
+        setIsCheckingAccess(false);
+      })
+      .catch(() => {
+        setIsUnlocked(false);
+        setIsCheckingAccess(false);
+      });
 
     const {
       data: { subscription }
@@ -125,6 +135,20 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
 
   if (isUnlocked) {
     return <>{children}</>;
+  }
+
+  if (isCheckingAccess) {
+    return (
+      <main className="lock-screen">
+        <section className="lock-panel">
+          <div className="brand-mark lock-mark">
+            <ShieldCheck size={22} />
+          </div>
+          <h1 className="lock-title">EchelonAccess</h1>
+          <p className="lock-copy">Opening workspace...</p>
+        </section>
+      </main>
+    );
   }
 
   return (
