@@ -33,7 +33,14 @@ const RelationshipGraph = dynamic(() => import("@/components/relationship-graph"
   loading: () => <PanelLoading label="Loading graph" />
 });
 
-type WorkspaceView = "network" | "opportunities" | "people" | "dossier" | "mandates" | "organizations" | "outreach";
+type WorkspaceView =
+  | "relationship-map"
+  | "intro-scoring"
+  | "people"
+  | "dossier"
+  | "mandates"
+  | "organizations"
+  | "outreach";
 type SharedCluster = {
   label: string;
   kind: "Sector" | "Geography" | "Institution" | "Mandate";
@@ -52,7 +59,7 @@ type MandateContext = {
   mandate: Mandate;
   people: Person[];
 };
-type NetworkIntelligence = {
+type RelationshipSummary = {
   clusters: SharedCluster[];
   mandateContexts: MandateContext[];
   organizationOverlaps: { label: string; people: Person[] }[];
@@ -72,18 +79,18 @@ type MandateSignal = {
 };
 
 const views: { id: WorkspaceView; label: string }[] = [
-  { id: "network", label: "Network" },
-  { id: "opportunities", label: "Intro Paths" },
-  { id: "people", label: "People" },
-  { id: "dossier", label: "Dossier" },
-  { id: "mandates", label: "Mandates" },
-  { id: "organizations", label: "Organizations" },
-  { id: "outreach", label: "Outreach" }
+  { id: "relationship-map", label: "Relationship Map" },
+  { id: "intro-scoring", label: "Intro Scoring" },
+  { id: "people", label: "People Records" },
+  { id: "dossier", label: "Person Dossiers" },
+  { id: "mandates", label: "Mandate Definitions" },
+  { id: "organizations", label: "Organization Scope" },
+  { id: "outreach", label: "Outreach Queue" }
 ];
 
 const hashViewMap: Record<string, WorkspaceView> = {
-  graph: "network",
-  opportunities: "opportunities",
+  graph: "relationship-map",
+  opportunities: "intro-scoring",
   people: "people",
   dossier: "dossier",
   mandates: "mandates",
@@ -91,21 +98,32 @@ const hashViewMap: Record<string, WorkspaceView> = {
   outreach: "outreach"
 };
 
+const emptyRelationshipSummary: RelationshipSummary = {
+  clusters: [],
+  mandateContexts: [],
+  organizationOverlaps: [],
+  personSignals: []
+};
+
 export function ResponsiveWorkspace({ data }: { data: AppData }) {
-  const [activeView, setActiveView] = useState<WorkspaceView>("network");
+  const [activeView, setActiveView] = useState<WorkspaceView>("relationship-map");
   const [isPending, startTransition] = useTransition();
-  const intelligence = useMemo(() => buildNetworkIntelligence(data), [data]);
+  const needsRelationshipSummary = activeView === "relationship-map" || activeView === "intro-scoring";
+  const relationshipSummary = useMemo(
+    () => (needsRelationshipSummary ? buildRelationshipSummary(data) : emptyRelationshipSummary),
+    [data, needsRelationshipSummary]
+  );
   const introPaths = useMemo(
-    () => (activeView === "opportunities" ? buildIntroPaths(intelligence.personSignals.slice(0, 180)) : []),
-    [activeView, intelligence.personSignals]
+    () => (activeView === "intro-scoring" ? buildIntroPaths(relationshipSummary.personSignals.slice(0, 180)) : []),
+    [activeView, relationshipSummary.personSignals]
   );
   const counts = useMemo(
     () => ({
       people: data.people.length,
       mandates: data.mandates.length,
-      clusters: intelligence.clusters.length
+      activeModule: views.find((view) => view.id === activeView)?.label ?? "Module"
     }),
-    [data.mandates.length, data.people.length, intelligence.clusters.length]
+    [activeView, data.mandates.length, data.people.length]
   );
 
   function openView(view: WorkspaceView) {
@@ -129,13 +147,15 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
     <section className="panel" aria-busy={isPending} id="graph" style={{ overflow: "visible" }}>
       <div className="panel-header" style={{ alignItems: "flex-start" }}>
         <div>
-          <h2 className="panel-title">Interrelationship Desk</h2>
-          <div className="section-kicker">Mutual interests, mandate overlap, and introduction paths across the rolodex.</div>
+          <h2 className="panel-title">Workspace Modules</h2>
+          <div className="section-kicker">
+            Open one focused module at a time: map connections, score introductions, edit records, define mandates, scope organizations, or queue outreach.
+          </div>
         </div>
         <div className="badge-row">
           <Badge tone="blue">{counts.people} people</Badge>
           <Badge tone="purple">{counts.mandates} mandates</Badge>
-          <Badge tone="green">Intro paths on demand</Badge>
+          <Badge tone="green">{counts.activeModule}</Badge>
           <a className="button" href={withBasePath("/mandates/new")}>
             Define mandate
           </a>
@@ -161,8 +181,8 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
       </div>
 
       <div className="panel-body" role="tabpanel">
-        {activeView === "network" ? <NetworkOverview data={data} intelligence={intelligence} /> : null}
-        {activeView === "opportunities" ? <OpportunityBoard introPaths={introPaths} /> : null}
+        {activeView === "relationship-map" ? <RelationshipMapPanel data={data} summary={relationshipSummary} /> : null}
+        {activeView === "intro-scoring" ? <IntroScoringBoard introPaths={introPaths} /> : null}
         {activeView === "people" ? (
           <PeopleTable
             mandates={data.mandates}
@@ -183,16 +203,15 @@ export function ResponsiveWorkspace({ data }: { data: AppData }) {
   );
 }
 
-function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: NetworkIntelligence }) {
+function RelationshipMapPanel({ data, summary }: { data: AppData; summary: RelationshipSummary }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <RelationshipGraph data={data} />
 
       <div className="review-section">
-        <div className="field-label">Operating Model</div>
+        <div className="field-label">Module Boundary</div>
         <div className="field-value">
-          The platform now centers on who can be productively brought together: shared mandates, overlapping interests, common
-          institutions, and credible access paths.
+          This panel only maps entity connections: people, mandates, organizations, scope signals, and evidence-backed overlaps.
         </div>
       </div>
 
@@ -200,13 +219,13 @@ function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: 
         <div className="review-section">
           <div className="review-section-header">
             <div>
-              <div className="field-label">Mandate Intersection Map</div>
-              <div className="field-value">Active asks with the strongest relationship surface area.</div>
+              <div className="field-label">Mandate-Contact Matches</div>
+              <div className="field-value">Active mandates with matched contacts.</div>
             </div>
-            <Badge tone="purple">{intelligence.mandateContexts.length}</Badge>
+            <Badge tone="purple">{summary.mandateContexts.length}</Badge>
           </div>
           <div className="parsed-fields">
-            {intelligence.mandateContexts.slice(0, 5).map((context) => (
+            {summary.mandateContexts.slice(0, 5).map((context) => (
               <div key={context.mandate.id}>
                 <dt>{context.mandate.title}</dt>
                 <dd>
@@ -215,23 +234,23 @@ function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: 
                 </dd>
               </div>
             ))}
-            {!intelligence.mandateContexts.length ? <EmptyLine label="No mandate intersections yet." /> : null}
+            {!summary.mandateContexts.length ? <EmptyLine label="No mandate-contact matches yet." /> : null}
           </div>
         </div>
 
         <div className="review-section">
           <div className="review-section-header">
             <div>
-              <div className="field-label">Interest Parities</div>
-              <div className="field-value">Clusters where multiple contacts share usable context.</div>
+              <div className="field-label">Shared Interest Clusters</div>
+              <div className="field-value">People grouped by sector, geography, institution, or named mandate.</div>
             </div>
-            <Badge tone="green">{intelligence.clusters.length}</Badge>
+            <Badge tone="green">{summary.clusters.length}</Badge>
           </div>
           <div style={{ display: "grid", gap: 10 }}>
-            {intelligence.clusters.slice(0, 6).map((cluster) => (
+            {summary.clusters.slice(0, 6).map((cluster) => (
               <ClusterRow cluster={cluster} key={`${cluster.kind}-${cluster.label}`} />
             ))}
-            {!intelligence.clusters.length ? <div className="empty-state">No shared-interest clusters yet.</div> : null}
+            {!summary.clusters.length ? <div className="empty-state">No shared-interest clusters yet.</div> : null}
           </div>
         </div>
       </div>
@@ -240,30 +259,30 @@ function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: 
         <div className="review-section">
           <div className="review-section-header">
             <div>
-              <div className="field-label">Near-Term Introduction Paths</div>
-              <div className="field-value">Pairwise path scoring is loaded only when requested.</div>
+              <div className="field-label">Intro Scoring Shortcut</div>
+              <div className="field-value">Pairwise scoring stays isolated in Intro Scoring.</div>
             </div>
-            <Badge tone="blue">{intelligence.personSignals.length} signals</Badge>
+            <Badge tone="blue">{summary.personSignals.length} signals</Badge>
           </div>
-          <div className="empty-state">Open Intro Paths to score relationship pairs without slowing the Network Desk.</div>
+          <div className="empty-state">Open Intro Scoring to rank candidate introductions without loading the map editor.</div>
         </div>
 
         <div className="review-section">
           <div className="review-section-header">
             <div>
-              <div className="field-label">Data Overlaps</div>
+              <div className="field-label">Organization Role Overlaps</div>
               <div className="field-value">Organizations and prior roles that may reveal bridge paths.</div>
             </div>
-            <Badge tone="amber">{intelligence.organizationOverlaps.length}</Badge>
+            <Badge tone="amber">{summary.organizationOverlaps.length}</Badge>
           </div>
           <div className="parsed-fields">
-            {intelligence.organizationOverlaps.slice(0, 6).map((overlap) => (
+            {summary.organizationOverlaps.slice(0, 6).map((overlap) => (
               <div key={overlap.label}>
                 <dt>{overlap.label}</dt>
                 <dd>{overlap.people.map((person) => person.displayName).join(", ")}</dd>
               </div>
             ))}
-            {!intelligence.organizationOverlaps.length ? <EmptyLine label="No organization overlaps yet." /> : null}
+            {!summary.organizationOverlaps.length ? <EmptyLine label="No organization overlaps yet." /> : null}
           </div>
         </div>
       </div>
@@ -276,14 +295,14 @@ function NetworkOverview({ data, intelligence }: { data: AppData; intelligence: 
   );
 }
 
-function OpportunityBoard({ introPaths }: { introPaths: IntroPath[] }) {
+function IntroScoringBoard({ introPaths }: { introPaths: IntroPath[] }) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {introPaths.map((path) => (
         <article className="review-section" key={`${path.left.id}-${path.right.id}`}>
           <div className="review-section-header">
             <div>
-              <div className="field-label">Potential Introduction</div>
+              <div className="field-label">Candidate Introduction</div>
               <div className="review-match-name">
                 {path.left.displayName}
                 {" <> "}
@@ -316,7 +335,9 @@ function OpportunityBoard({ introPaths }: { introPaths: IntroPath[] }) {
           </p>
         </article>
       ))}
-      {!introPaths.length ? <div className="empty-state">Add relationship context, mandates, sectors, or institutions to surface intro paths.</div> : null}
+      {!introPaths.length ? (
+        <div className="empty-state">Add mandate, sector, geography, or institution fields to score introductions.</div>
+      ) : null}
     </div>
   );
 }
@@ -369,7 +390,7 @@ function PanelLoading({ label }: { label: string }) {
   return <div className="empty-state">{label}...</div>;
 }
 
-function buildNetworkIntelligence(data: AppData): NetworkIntelligence {
+function buildRelationshipSummary(data: AppData): RelationshipSummary {
   const people = data.people.slice(0, 400);
   const mandates = data.mandates.slice(0, 40);
   const mandateSignals = buildMandateSignals(mandates);

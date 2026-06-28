@@ -285,13 +285,13 @@ export function PeopleTable({
     <div className="panel">
       <div className="panel-header">
         <div>
-          <h2 className="panel-title">People Intelligence</h2>
-          <div className="section-kicker">Scoped relationship lists for large networks, driven by mandate and graph context.</div>
+          <h2 className="panel-title">People Records</h2>
+          <div className="section-kicker">Edit people, roles, review status, and mandate scope without loading dossier views.</div>
         </div>
         <div className="badge-row">
           <Badge tone="blue">{filteredPeople.length} people</Badge>
           <Badge tone="purple">{scopedOrganizationCount} organizations</Badge>
-          <Badge tone="amber">{selectedMandate ? selectedMandate.title : "All relationships"}</Badge>
+          <Badge tone="amber">{selectedMandate ? selectedMandate.title : "All people"}</Badge>
         </div>
       </div>
       <div className="people-workbench">
@@ -301,7 +301,7 @@ export function PeopleTable({
             Scope
           </div>
           <button className={`scope-option ${selectedScopeId === "all" ? "active" : ""}`} onClick={() => setScope("all")} type="button">
-            <span>All Relationships</span>
+            <span>All people</span>
             <Badge tone="blue">{people.length}</Badge>
           </button>
           {mandates.map((mandate) => {
@@ -324,7 +324,7 @@ export function PeopleTable({
           <div className="scope-graph" aria-label="Scoped relationship graph">
             <button className={`graph-node graph-node-mandate ${selectedMandate ? "active" : ""}`} onClick={() => setScope(selectedMandate?.id ?? "all")} type="button">
               <Network size={15} />
-              {selectedMandate ? selectedMandate.title : "All graph"}
+              {selectedMandate ? selectedMandate.title : "All people"}
             </button>
             <div className="graph-link" />
             <div className="graph-cluster">

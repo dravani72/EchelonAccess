@@ -21,13 +21,13 @@ import { OfflineStatus } from "@/components/offline-status";
 import { SignOutButton } from "@/components/sign-out-button";
 
 const workspaceItems = [
-  { id: "dashboard", label: "Network Desk", icon: LayoutDashboard, href: "/#graph", meta: "Map" },
-  { id: "opportunities", label: "Intro Paths", icon: Network, href: "/#opportunities", meta: "Score" },
-  { id: "people", label: "People", icon: Users, href: "/#people", meta: "Edit" },
-  { id: "dossier", label: "Dossier", icon: FileStack, href: "/#dossier", meta: "Inspect" },
-  { id: "mandates", label: "Mandates", icon: GitBranch, href: "/#mandates", meta: "Define" },
-  { id: "organizations", label: "Organizations", icon: Building2, href: "/#organizations", meta: "Scope" },
-  { id: "outreach", label: "Outreach", icon: ContactRound, href: "/#outreach", meta: "Queue" }
+  { id: "relationship-map", label: "Relationship Map", icon: LayoutDashboard, href: "/#graph", meta: "Graph" },
+  { id: "intro-scoring", label: "Intro Scoring", icon: Network, href: "/#opportunities", meta: "Rank" },
+  { id: "people", label: "People Records", icon: Users, href: "/#people", meta: "Edit" },
+  { id: "dossier", label: "Person Dossiers", icon: FileStack, href: "/#dossier", meta: "Inspect" },
+  { id: "mandates", label: "Mandate Definitions", icon: GitBranch, href: "/#mandates", meta: "Define" },
+  { id: "organizations", label: "Organization Scope", icon: Building2, href: "/#organizations", meta: "Scope" },
+  { id: "outreach", label: "Outreach Queue", icon: ContactRound, href: "/#outreach", meta: "Send" }
 ];
 
 const actionItems = [
@@ -36,8 +36,8 @@ const actionItems = [
 ];
 
 const hashSectionMap: Record<string, string> = {
-  graph: "dashboard",
-  opportunities: "opportunities",
+  graph: "relationship-map",
+  opportunities: "intro-scoring",
   people: "people",
   dossier: "dossier",
   mandates: "mandates",
@@ -134,7 +134,7 @@ const sidebarStyles = `
   }
 `;
 
-export function AppShell({ activeSection = "dashboard", children }: { activeSection?: string; children: React.ReactNode }) {
+export function AppShell({ activeSection = "relationship-map", children }: { activeSection?: string; children: React.ReactNode }) {
   const [currentSection, setCurrentSection] = useState(activeSection);
 
   function handleWorkspaceNavigation(event: MouseEvent<HTMLAnchorElement>, hash: string) {
@@ -211,7 +211,7 @@ export function AppShell({ activeSection = "dashboard", children }: { activeSect
         </nav>
 
         <div className="workspace-note">
-          Private operator workspace. Current context: infrastructure, energy, and strategic capital mandates.
+          Focused modules for relationship mapping, mandate definition, organization scope, and outreach review.
         </div>
       </aside>
 
@@ -226,13 +226,13 @@ export function AppShell({ activeSection = "dashboard", children }: { activeSect
           </label>
           <a className="button" href={withBasePath("/#outreach")} onClick={(event) => handleWorkspaceNavigation(event, "#outreach")}>
             <Bell size={16} />
-            Review queue
+            Outreach queue
           </a>
           <OfflineStatus />
           <SignOutButton />
           <a className="button primary" href={withBasePath("/relationships/new")}>
             <Plus size={16} />
-            Add
+            Add relationship
           </a>
         </header>
         {children}

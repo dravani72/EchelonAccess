@@ -119,7 +119,7 @@ export function IntelligenceRail({ data }: { data: AppData }) {
         </div>
         <p>{data.source === "supabase" ? data.diagnostic ?? `Connected: ${data.currentWorkspace?.name ?? "Workspace"}.` : "Supabase unavailable."}</p>
         <a className="rail-link" href="#graph">
-          Open desk <ArrowRight size={14} />
+          Open relationship map <ArrowRight size={14} />
         </a>
       </div>
 
