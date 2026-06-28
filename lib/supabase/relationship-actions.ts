@@ -36,6 +36,10 @@ type CreateRelationshipInput = {
   title?: string;
   notes?: string;
   cardFile?: File | null;
+  rawOcrText?: string;
+  parsedCardFields?: Record<string, unknown>;
+  cardConfidence?: number | null;
+  cardReviewed?: boolean;
   avatarFile?: File | null;
 } & IntelligenceInput;
 
@@ -73,7 +77,7 @@ export async function createRelationship(input: CreateRelationshipInput) {
       notes: input.notes?.trim() || null,
       ...buildIntelligencePayload(input),
       source_count: cardPath ? 1 : 0,
-      review_status: cardPath ? "needs_review" : "verified"
+      review_status: cardPath && !input.cardReviewed ? "needs_review" : "verified"
     })
     .select("id")
     .single();
@@ -112,13 +116,20 @@ export async function createRelationship(input: CreateRelationshipInput) {
       person_id: person.id,
       image_url: cardPath,
       parsed_fields: {
+        ...(input.parsedCardFields ?? {}),
         name: canonicalName,
         organization: input.organization?.trim() || null,
-        title: input.title?.trim() || null
+        title: input.title?.trim() || null,
+        artifactRetention: {
+          originalUploaded: false,
+          storedArtifact: "normalized_image",
+          normalizedMimeType: input.cardFile?.type ?? null
+        }
       },
+      raw_ocr_text: cleanText(input.rawOcrText),
       source_event: "UI upload",
-      confidence: 0.35,
-      review_status: "unreviewed"
+      confidence: input.cardConfidence ?? 0.35,
+      review_status: input.cardReviewed ? "reviewed" : "unreviewed"
     });
 
     if (cardError) {

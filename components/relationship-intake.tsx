@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/badge";
 import {
@@ -21,7 +21,7 @@ const intakeMethods = [
     id: "card",
     label: "Business card photo",
     icon: Camera,
-    description: "Upload a card image, preserve the artifact, OCR the text, and review parsed fields before merge."
+    description: "Normalize a card image locally, OCR the text, and review parsed fields before merge. Originals are not uploaded."
   },
   {
     id: "mobile",
@@ -38,6 +38,19 @@ const intakeMethods = [
 ] as const;
 
 type IntakeMethod = (typeof intakeMethods)[number]["id"];
+type CardOcrResult = {
+  name: string | null;
+  title: string | null;
+  organization: string | null;
+  emails: string[];
+  phones: string[];
+  website: string | null;
+  address: string | null;
+  cardDateHint: string | null;
+  rawText: string;
+  confidence: number;
+  warnings: string[];
+};
 type IntelligenceFormState = {
   trustLevel: "" | "unknown" | "low" | "moderate" | "high" | "sensitive";
   opposition: string;
@@ -99,6 +112,9 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
   const [manualNotes, setManualNotes] = useState("");
   const [intelligence, setIntelligence] = useState<IntelligenceFormState>(emptyIntelligence);
   const [cardFile, setCardFile] = useState<File | null>(null);
+  const [cardOcr, setCardOcr] = useState<CardOcrResult | null>(null);
+  const [originalCardName, setOriginalCardName] = useState("");
+  const [isPreparingCard, setIsPreparingCard] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [contactFile, setContactFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
@@ -125,6 +141,10 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
         notes: manualNotes,
         ...serializeIntelligence(intelligence),
         cardFile,
+        rawOcrText: cardOcr?.rawText,
+        parsedCardFields: cardOcr ? buildCardParsedFields(cardOcr) : undefined,
+        cardConfidence: cardOcr?.confidence,
+        cardReviewed: Boolean(cardFile),
         avatarFile
       });
       setManualName("");
@@ -133,6 +153,8 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
       setManualNotes("");
       setIntelligence(emptyIntelligence);
       setCardFile(null);
+      setCardOcr(null);
+      setOriginalCardName("");
       setAvatarFile(null);
       setStatus("Relationship saved.");
       router.refresh();
@@ -165,6 +187,39 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Could not upload contact import.");
       setStatus("");
+    }
+  }
+
+  async function handleCardSelection(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    setError("");
+    setStatus("");
+    setCardOcr(null);
+    setCardFile(null);
+    setOriginalCardName("");
+
+    if (!selectedFile) return;
+
+    try {
+      setIsPreparingCard(true);
+      setStatus("Normalizing card image before OCR...");
+      const normalizedFile = await normalizeBusinessCardImage(selectedFile);
+      setCardFile(normalizedFile);
+      setOriginalCardName(selectedFile.name);
+      setStatus("Reading normalized card image...");
+
+      const ocr = await runCardOcr(normalizedFile);
+      setCardOcr(ocr);
+      setManualName((current) => current || ocr.name || "");
+      setManualTitle((current) => current || ocr.title || "");
+      setManualOrg((current) => current || ocr.organization || "");
+      setStatus("OCR complete. Review fields before saving.");
+    } catch (cardError) {
+      setError(cardError instanceof Error ? cardError.message : "Could not prepare business card image.");
+      setStatus("");
+    } finally {
+      setIsPreparingCard(false);
     }
   }
 
@@ -210,10 +265,16 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
               <label className="upload-zone">
                 <FileUp size={24} />
                 <span>Drop or choose business card photo</span>
-                <small>JPG, PNG, HEIC, or PDF scan</small>
-                <input accept="image/*,.pdf" onChange={(event) => setCardFile(event.target.files?.[0] ?? null)} type="file" />
+                <small>Image files are converted locally to normalized JPEG before upload</small>
+                <input accept="image/*" disabled={isPreparingCard} onChange={handleCardSelection} type="file" />
               </label>
-              {cardFile ? <div className="form-notice">Selected: {cardFile.name}</div> : null}
+              {cardFile ? (
+                <div className="form-notice">
+                  Normalized artifact ready: {cardFile.name}
+                  {originalCardName ? ` from ${originalCardName}` : ""}. Original file was not uploaded.
+                </div>
+              ) : null}
+              {cardOcr ? <CardOcrPreview result={cardOcr} /> : null}
               <form className="manual-form" onSubmit={handleManualSubmit}>
                 <label>
                   <span className="field-label">Person name</span>
@@ -245,9 +306,9 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
                 <IntelligenceCapture intelligence={intelligence} setIntelligence={setIntelligence} />
                 {error ? <div className="form-error">{error}</div> : null}
                 {status ? <div className="form-notice">{status}</div> : null}
-                <button className="button primary" disabled={!isSupabase} type="submit">
+                <button className="button primary" disabled={!isSupabase || isPreparingCard} type="submit">
                   <Plus size={16} />
-                  Save card-backed relationship
+                  {isPreparingCard ? "Preparing card..." : "Save reviewed card relationship"}
                 </button>
               </form>
               <div className="intake-steps">
@@ -567,6 +628,46 @@ function IntelligenceCapture({
   );
 }
 
+function CardOcrPreview({ result }: { result: CardOcrResult }) {
+  return (
+    <div className="review-section">
+      <div className="review-section-header">
+        <div>
+          <div className="field-label">OCR review</div>
+          <div className="field-value">Review and correct fields below before saving.</div>
+        </div>
+        <Badge tone={result.confidence >= 0.75 ? "green" : "amber"}>{Math.round(result.confidence * 100)}%</Badge>
+      </div>
+      <div className="parsed-fields">
+        <div>
+          <dt>Name</dt>
+          <dd>{result.name ?? "Not detected"}</dd>
+        </div>
+        <div>
+          <dt>Title</dt>
+          <dd>{result.title ?? "Not detected"}</dd>
+        </div>
+        <div>
+          <dt>Organization</dt>
+          <dd>{result.organization ?? "Not detected"}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{result.emails.join(", ") || "Not detected"}</dd>
+        </div>
+        <div>
+          <dt>Phone</dt>
+          <dd>{result.phones.join(", ") || "Not detected"}</dd>
+        </div>
+        <div>
+          <dt>Warnings</dt>
+          <dd>{result.warnings.join(", ") || "None"}</dd>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SelectField({
   label,
   onChange,
@@ -666,6 +767,122 @@ function serializeIntelligence(intelligence: IntelligenceFormState) {
     sourceConfidence: Number.isFinite(confidence) && intelligence.sourceConfidence.trim() ? confidence / 100 : null,
     lastVerifiedDate: intelligence.lastVerifiedDate
   };
+}
+
+function buildCardParsedFields(ocr: CardOcrResult) {
+  return {
+    name: ocr.name,
+    title: ocr.title,
+    organization: ocr.organization,
+    emails: ocr.emails,
+    phones: ocr.phones,
+    website: ocr.website,
+    address: ocr.address,
+    cardDateHint: ocr.cardDateHint,
+    warnings: ocr.warnings
+  };
+}
+
+async function runCardOcr(file: File): Promise<CardOcrResult> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch("/api/cards/ocr", {
+    method: "POST",
+    body: formData
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Business card OCR failed.");
+  }
+
+  return normalizeCardOcrResult(payload);
+}
+
+function normalizeCardOcrResult(value: unknown): CardOcrResult {
+  const record = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return {
+    name: nullableString(record.name),
+    title: nullableString(record.title),
+    organization: nullableString(record.organization),
+    emails: stringArray(record.emails),
+    phones: stringArray(record.phones),
+    website: nullableString(record.website),
+    address: nullableString(record.address),
+    cardDateHint: nullableString(record.cardDateHint),
+    rawText: typeof record.rawText === "string" ? record.rawText : "",
+    confidence: clampConfidence(record.confidence),
+    warnings: stringArray(record.warnings)
+  };
+}
+
+async function normalizeBusinessCardImage(file: File) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Business card capture currently accepts image files only. Convert PDFs to an image before upload.");
+  }
+
+  const image = await loadImage(file);
+  const maxLongEdge = 1600;
+  const scale = Math.min(1, maxLongEdge / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Could not prepare image canvas.");
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.78));
+  URL.revokeObjectURL(image.src);
+
+  if (!blob) {
+    throw new Error("Could not convert card image.");
+  }
+
+  return new File([blob], `${baseFileName(file.name)}-normalized.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now()
+  });
+}
+
+function loadImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => {
+      URL.revokeObjectURL(image.src);
+      reject(new Error("This image format could not be decoded in the browser. Export it as JPG or PNG and try again."));
+    };
+    image.src = URL.createObjectURL(file);
+  });
+}
+
+function nullableString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function stringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim());
+}
+
+function clampConfidence(value: unknown) {
+  const numberValue = typeof value === "number" ? value : typeof value === "string" ? Number(value) : 0;
+  if (!Number.isFinite(numberValue)) return 0;
+  return Math.max(0, Math.min(1, numberValue));
+}
+
+function baseFileName(name: string) {
+  return (name.replace(/\.[^.]+$/, "") || "business-card").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
 }
 
 function splitList(value: string) {
