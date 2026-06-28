@@ -204,7 +204,7 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
     try {
       setIsPreparingCard(true);
       setStatus("Normalizing card image before OCR...");
-      const normalizedFile = await normalizeBusinessCardImage(selectedFile);
+      const normalizedFile = await normalizeSelectedCardImage(selectedFile, setStatus);
       setCardFile(normalizedFile);
       setOriginalCardName(selectedFile.name);
       setStatus("Reading normalized card image...");
@@ -265,8 +265,8 @@ export function RelationshipIntake({ workspaceId, source }: { workspaceId?: stri
               <label className="upload-zone">
                 <FileUp size={24} />
                 <span>Drop or choose business card photo</span>
-                <small>Image files are converted locally to normalized JPEG before upload</small>
-                <input accept="image/*" disabled={isPreparingCard} onChange={handleCardSelection} type="file" />
+                <small>HEIC, JPG, PNG, and WebP are converted to normalized JPEG before upload</small>
+                <input accept="image/*,.heic,.heif" disabled={isPreparingCard} onChange={handleCardSelection} type="file" />
               </label>
               {cardFile ? (
                 <div className="form-notice">
@@ -818,9 +818,24 @@ function normalizeCardOcrResult(value: unknown): CardOcrResult {
   };
 }
 
+async function normalizeSelectedCardImage(file: File, setStatus: (status: string) => void) {
+  try {
+    return await normalizeBusinessCardImage(file);
+  } catch (error) {
+    if (!isHeicFile(file)) {
+      throw error;
+    }
+
+    setStatus("Converting HEIC image before OCR...");
+    const convertedFile = await convertHeicOnServer(file);
+    setStatus("Compressing converted card image...");
+    return normalizeBusinessCardImage(convertedFile);
+  }
+}
+
 async function normalizeBusinessCardImage(file: File) {
   if (!file.type.startsWith("image/")) {
-    throw new Error("Business card capture currently accepts image files only. Convert PDFs to an image before upload.");
+    throw new Error("Business card capture accepts image files only.");
   }
 
   const image = await loadImage(file);
@@ -860,10 +875,37 @@ function loadImage(file: File) {
     image.onload = () => resolve(image);
     image.onerror = () => {
       URL.revokeObjectURL(image.src);
-      reject(new Error("This image format could not be decoded in the browser. Export it as JPG or PNG and try again."));
+      reject(new Error("This image format could not be decoded in the browser."));
     };
     image.src = URL.createObjectURL(file);
   });
+}
+
+async function convertHeicOnServer(file: File) {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch("/api/cards/normalize", {
+    method: "POST",
+    body: formData
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error ?? "Could not convert HEIC image.");
+  }
+
+  const blob = await response.blob();
+  return new File([blob], `${baseFileName(file.name)}-converted.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now()
+  });
+}
+
+function isHeicFile(file: File) {
+  const normalizedName = file.name.toLowerCase();
+  const normalizedType = file.type.toLowerCase();
+  return normalizedType.includes("heic") || normalizedType.includes("heif") || normalizedName.endsWith(".heic") || normalizedName.endsWith(".heif");
 }
 
 function nullableString(value: unknown) {
