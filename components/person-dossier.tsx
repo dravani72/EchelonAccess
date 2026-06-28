@@ -14,6 +14,7 @@ const ROLE_RENDER_LIMIT = 24;
 const INTERACTION_RENDER_LIMIT = 30;
 const CARD_RENDER_LIMIT = 8;
 const SOURCE_RENDER_LIMIT = 60;
+const SOURCE_DETAIL_LIMIT = 320;
 const containedStyle = { contain: "content" } satisfies CSSProperties;
 const identityCardStyle = {
   alignSelf: "start",
@@ -44,6 +45,7 @@ export function PersonDossier({
 }) {
   const [activeTab, setActiveTab] = useState<DossierTab>("Overview");
   const [selectedPersonId, setSelectedPersonId] = useState(people[0]?.id ?? "");
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(() => new Set());
   const visiblePeople = useMemo(() => people.slice(0, DOSSIER_PERSON_LIMIT), [people]);
   const peopleById = useMemo(() => new Map(visiblePeople.map((item) => [item.id, item])), [visiblePeople]);
   const rolesByPersonId = useMemo(() => groupByPersonId(roles), [roles]);
@@ -66,13 +68,13 @@ export function PersonDossier({
   const related = useMemo(() => {
     if (!person) return [];
     const matches: { person: Person; reasons: string[] }[] = [];
-    const personSectors = new Set(person.sectorTags);
+    const personSectors = new Set(safeStringList(person.sectorTags));
 
     for (const candidate of visiblePeople) {
       if (candidate.id === person.id) continue;
       const reasons = [
         candidate.currentOrganization === person.currentOrganization ? "same organization" : "",
-        candidate.sectorTags.some((tag) => personSectors.has(tag)) ? "shared sector" : "",
+        safeStringList(candidate.sectorTags).some((tag) => personSectors.has(tag)) ? "shared sector" : "",
         candidate.geography === person.geography ? "same geography" : ""
       ].filter(Boolean);
 
@@ -99,7 +101,7 @@ export function PersonDossier({
           id: `interaction-${interaction.id}`,
           type: "Interaction",
           label: interaction.sourceLabel,
-          detail: interaction.summary,
+          detail: truncateText(interaction.summary, SOURCE_DETAIL_LIMIT),
           confidence: interaction.confidence,
           isMockData: interaction.isMockData
         })),
@@ -107,7 +109,7 @@ export function PersonDossier({
           id: `card-${card.id}`,
           type: "Business card",
           label: card.sourceEvent ?? "Uploaded artifact",
-          detail: card.imagePath ?? card.rawOcrText ?? "Stored card evidence",
+          detail: truncateText(card.imagePath ?? card.rawOcrText ?? "Stored card evidence", SOURCE_DETAIL_LIMIT),
           confidence: card.confidence,
           isMockData: card.isMockData
         }))
@@ -126,6 +128,27 @@ export function PersonDossier({
     }
   }, [peopleById, selectedPersonId, visiblePeople]);
 
+  useEffect(() => {
+    setExpandedCardIds(new Set());
+  }, [selectedPersonId]);
+
+  function handleSelectPerson(personId: string) {
+    setSelectedPersonId(personId);
+    setActiveTab("Overview");
+  }
+
+  function toggleCardImage(cardId: string) {
+    setExpandedCardIds((current) => {
+      const next = new Set(current);
+      if (next.has(cardId)) {
+        next.delete(cardId);
+      } else {
+        next.add(cardId);
+      }
+      return next;
+    });
+  }
+
   if (!person) {
     return null;
   }
@@ -137,7 +160,7 @@ export function PersonDossier({
           <h2 className="panel-title">Person Dossier</h2>
           <div className="section-kicker">Current status layered over preserved relationship history.</div>
         </div>
-        <select className="text-input dossier-select" onChange={(event) => setSelectedPersonId(event.target.value)} value={person.id}>
+        <select className="text-input dossier-select" onChange={(event) => handleSelectPerson(event.target.value)} value={person.id}>
           {visiblePeople.map((item) => (
             <option key={item.id} value={item.id}>
               {item.displayName}
@@ -162,7 +185,7 @@ export function PersonDossier({
             {activeTab === "Timeline" ? <TimelineTab interactions={personInteractions} /> : null}
             {activeTab === "Roles" ? <RolesTab roles={personRoles} /> : null}
             {activeTab === "Relationships" ? <RelationshipsTab related={related} /> : null}
-            {activeTab === "Cards" ? <CardsTab cards={personCards} /> : null}
+            {activeTab === "Cards" ? <CardsTab cards={personCards} expandedCardIds={expandedCardIds} onToggleCardImage={toggleCardImage} /> : null}
             {activeTab === "Sources" ? <SourcesTab rows={sourceRows} /> : null}
           </div>
         </div>
@@ -172,7 +195,8 @@ export function PersonDossier({
 }
 
 function IdentityCard({ person }: { person: Person }) {
-  const initials = person.displayName
+  const displayName = person.displayName || "Unnamed person";
+  const initials = displayName
     .split(" ")
     .map((part) => part[0])
     .join("")
@@ -182,7 +206,7 @@ function IdentityCard({ person }: { person: Person }) {
   return (
     <aside className={`identity-card ${person.isMockData ? "mock-record" : ""}`} style={identityCardStyle}>
       <div className="avatar">{initials}</div>
-      <div className="identity-name">{person.displayName}</div>
+      <div className="identity-name">{displayName}</div>
       <div className="muted">{person.currentTitle}</div>
       <div className="muted">{person.currentOrganization}</div>
 
@@ -196,7 +220,7 @@ function IdentityCard({ person }: { person: Person }) {
         <div>
           <div className="field-label">Sectors</div>
           <div className="field-value" style={boundedIdentityValueStyle}>
-            {person.sectorTags.join(", ") || "None tagged"}
+            {safeStringList(person.sectorTags).join(", ") || "None tagged"}
           </div>
         </div>
         <div>
@@ -276,13 +300,13 @@ function IntelligenceGrid({ person }: { person: Person }) {
     ["Do Not Discuss", person.doNotDiscuss],
     ["Best Next Move", person.bestNextMove],
     ["Nationality", person.nationality],
-    ["Languages", person.languages?.join(", ")],
+    ["Languages", safeStringList(person.languages).join(", ")],
     ["Public/Private Status", person.publicPrivateStatus],
-    ["Relevant Mandates", person.relevantMandates?.join(", ")],
-    ["Relevant Geographies", person.relevantGeographies?.join(", ")],
-    ["Relevant Sectors", person.relevantSectors?.join(", ")],
-    ["Relevant Institutions", person.relevantInstitutions?.join(", ")],
-    ["Source Confidence", person.sourceConfidence === undefined ? undefined : confidenceLabel(person.sourceConfidence)],
+    ["Relevant Mandates", safeStringList(person.relevantMandates).join(", ")],
+    ["Relevant Geographies", safeStringList(person.relevantGeographies).join(", ")],
+    ["Relevant Sectors", safeStringList(person.relevantSectors).join(", ")],
+    ["Relevant Institutions", safeStringList(person.relevantInstitutions).join(", ")],
+    ["Source Confidence", person.sourceConfidence === undefined ? undefined : confidencePercent(person.sourceConfidence)],
     ["Last Verified", person.lastVerifiedDate]
   ].filter(([, value]) => value);
 
@@ -322,7 +346,7 @@ function TimelineTab({ interactions, compact = false }: { interactions: Interact
                 </div>
                 <div className="badge-row" style={{ marginTop: 8 }}>
                   <Badge tone="blue">{interaction.sourceLabel}</Badge>
-                  <Badge tone="green">{confidenceLabel(interaction.confidence)}</Badge>
+                  <Badge tone="green">{confidencePercent(interaction.confidence)}</Badge>
                 </div>
               </div>
             </div>
@@ -367,7 +391,7 @@ function RolesTab({ roles, compact = false }: { roles: Role[]; compact?: boolean
                 </td>
                 <td style={tableCellStyle}>{role.sourceLabel}</td>
                 <td style={tableCellStyle}>
-                  <Badge tone={role.confidence > 0.85 ? "green" : "amber"}>{confidenceLabel(role.confidence)}</Badge>
+                  <Badge tone={safeNumber(role.confidence) > 0.85 ? "green" : "amber"}>{confidencePercent(role.confidence)}</Badge>
                 </td>
               </tr>
             ))}
@@ -410,21 +434,40 @@ function RelationshipsTab({ related }: { related: { person: Person; reasons: str
   );
 }
 
-function CardsTab({ cards }: { cards: BusinessCard[] }) {
+function CardsTab({
+  cards,
+  expandedCardIds,
+  onToggleCardImage
+}: {
+  cards: BusinessCard[];
+  expandedCardIds: Set<string>;
+  onToggleCardImage: (cardId: string) => void;
+}) {
   return (
     <div>
       <h3 className="panel-title">Business Cards</h3>
       {cards.length ? (
         <div className="dossier-grid" style={containedStyle}>
-          {cards.map((card) => (
-            <div className={`review-section ${card.isMockData ? "mock-record" : ""}`} key={card.id}>
-              <div className="card-preview">
-                {card.imageUrl ? (
-                  <img alt="Business card artifact" className="artifact-image" decoding="async" loading="lazy" src={card.imageUrl} />
-                ) : (
-                  "Stored artifact"
-                )}
-              </div>
+          {cards.map((card) => {
+            const isExpanded = expandedCardIds.has(card.id);
+            return (
+              <div className={`review-section ${card.isMockData ? "mock-record" : ""}`} key={card.id}>
+                <div className="card-preview">
+                  {card.imageUrl && isExpanded ? (
+                    <img alt="Business card artifact" className="artifact-image" decoding="async" loading="lazy" src={card.imageUrl} />
+                  ) : card.imageUrl ? (
+                    <button className="button" onClick={() => onToggleCardImage(card.id)} type="button">
+                      Load card image
+                    </button>
+                  ) : (
+                    "Stored artifact"
+                  )}
+                </div>
+                {card.imageUrl && isExpanded ? (
+                  <button className="button" onClick={() => onToggleCardImage(card.id)} type="button">
+                    Hide card image
+                  </button>
+                ) : null}
               <div className="field-list">
                 <div>
                   <div className="field-label">Scan Date</div>
@@ -441,8 +484,9 @@ function CardsTab({ cards }: { cards: BusinessCard[] }) {
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <EmptyState text="No business card artifacts linked to this person yet." />
@@ -477,7 +521,7 @@ function SourcesTab({
                 <td style={tableCellStyle}>{row.label}</td>
                 <td style={tableCellStyle}>{row.detail}</td>
                 <td style={tableCellStyle}>
-                  <Badge tone={row.confidence > 0.8 ? "green" : "amber"}>{confidenceLabel(row.confidence)}</Badge>
+                  <Badge tone={safeNumber(row.confidence) > 0.8 ? "green" : "amber"}>{confidencePercent(row.confidence)}</Badge>
                 </td>
               </tr>
             ))}
@@ -509,4 +553,23 @@ function groupByPersonId<T extends { personId?: string }>(records: T[]) {
   });
 
   return grouped;
+}
+
+function safeStringList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function truncateText(value: string, limit: number) {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit).trimEnd()}...`;
+}
+
+function safeNumber(value: unknown) {
+  const numericValue = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function confidencePercent(value: unknown) {
+  return confidenceLabel(safeNumber(value));
 }

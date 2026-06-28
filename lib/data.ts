@@ -309,16 +309,18 @@ function mapPerson(row: {
   mandate_matches: number;
   review_status: Person["reviewStatus"];
 }): Person {
+  const sourceConfidence = coerceNumber(row.source_confidence);
+
   return {
     id: row.id,
     canonicalName: row.canonical_name,
     displayName: row.display_name,
     honorific: row.honorific ?? undefined,
-    aliases: row.aliases,
+    aliases: coerceStringArray(row.aliases),
     notes: row.notes ?? undefined,
     opposition: row.opposition ?? undefined,
     nationality: row.nationality ?? undefined,
-    languages: row.languages,
+    languages: coerceStringArray(row.languages),
     publicPrivateStatus: row.public_private_status ?? undefined,
     influenceType: row.influence_type ?? undefined,
     accessPath: row.access_path ?? undefined,
@@ -329,14 +331,14 @@ function mapPerson(row: {
     sensitivityLevel: row.sensitivity_level ?? undefined,
     motivations: row.motivations ?? undefined,
     constraints: row.constraints ?? undefined,
-    relevantMandates: row.relevant_mandates,
-    relevantGeographies: row.relevant_geographies,
-    relevantSectors: row.relevant_sectors,
-    relevantInstitutions: row.relevant_institutions,
+    relevantMandates: coerceStringArray(row.relevant_mandates),
+    relevantGeographies: coerceStringArray(row.relevant_geographies),
+    relevantSectors: coerceStringArray(row.relevant_sectors),
+    relevantInstitutions: coerceStringArray(row.relevant_institutions),
     keyRelationships: row.key_relationships ?? undefined,
     doNotDiscuss: row.do_not_discuss ?? undefined,
     bestNextMove: row.best_next_move ?? undefined,
-    sourceConfidence: row.source_confidence ?? undefined,
+    sourceConfidence: sourceConfidence ?? undefined,
     lastVerifiedDate: row.last_verified_date ?? undefined,
     relationshipStrength: clampStrength(row.relationship_strength),
     trustLevel: row.trust_level ?? undefined,
@@ -346,9 +348,9 @@ function mapPerson(row: {
     avatarUrl: row.avatar_url ?? undefined,
     lastInteraction: row.last_interaction ?? "No interaction",
     geography: row.geography ?? "Unknown",
-    sectorTags: row.sector_tags,
-    sourceCount: row.source_count,
-    mandateMatches: row.mandate_matches,
+    sectorTags: coerceStringArray(row.sector_tags),
+    sourceCount: coerceInteger(row.source_count),
+    mandateMatches: coerceInteger(row.mandate_matches),
     reviewStatus: row.review_status,
     isMockData: isMockSeedId(row.id)
   };
@@ -373,7 +375,7 @@ function mapRole(row: {
     startDate: row.start_date ?? undefined,
     endDate: row.end_date ?? undefined,
     isCurrent: row.is_current,
-    confidence: row.confidence,
+    confidence: coerceNumber(row.confidence) ?? 0,
     sourceLabel: row.source_label,
     isMockData: isMockSeedId(row.id)
   };
@@ -398,7 +400,7 @@ function mapInteraction(row: {
     summary: row.summary,
     outcome: row.outcome ?? undefined,
     nextStep: row.next_step ?? undefined,
-    confidence: row.confidence,
+    confidence: coerceNumber(row.confidence) ?? 0,
     sourceLabel: row.source_label,
     isMockData: isMockSeedId(row.id)
   };
@@ -427,7 +429,7 @@ function mapBusinessCard(
     scanDate: row.scan_date,
     estimatedCardDate: row.estimated_card_date ?? undefined,
     sourceEvent: row.source_event ?? undefined,
-    confidence: row.confidence,
+    confidence: coerceNumber(row.confidence) ?? 0,
     reviewStatus: row.review_status,
     isMockData: isMockSeedId(row.id)
   };
@@ -503,6 +505,8 @@ function mapMandate(row: {
   relevant_contacts: number;
   next_action: string | null;
 }): Mandate {
+  const sourceConfidence = coerceNumber(row.source_confidence);
+
   return {
     id: row.id,
     clientName: row.client_name,
@@ -515,11 +519,11 @@ function mapMandate(row: {
     clientProfile: row.client_profile ?? undefined,
     sponsorProfile: row.sponsor_profile ?? undefined,
     sector: row.sector ?? undefined,
-    geography: row.geography,
-    jurisdiction: row.jurisdiction,
-    targetCounterpartyTypes: row.target_counterparty_types,
-    desiredCounterparties: row.desired_counterparties,
-    forbiddenContacts: row.forbidden_contacts,
+    geography: coerceStringArray(row.geography),
+    jurisdiction: coerceStringArray(row.jurisdiction),
+    targetCounterpartyTypes: coerceStringArray(row.target_counterparty_types),
+    desiredCounterparties: coerceStringArray(row.desired_counterparties),
+    forbiddenContacts: coerceStringArray(row.forbidden_contacts),
     capitalType: row.capital_type ?? undefined,
     capitalStack: row.capital_stack ?? undefined,
     targetAmount: row.target_amount ?? undefined,
@@ -537,21 +541,21 @@ function mapMandate(row: {
     sanctionsExposure: row.sanctions_exposure ?? undefined,
     politicalExposure: row.political_exposure ?? undefined,
     procurementProcess: row.procurement_process ?? undefined,
-    governmentTouchpoints: row.government_touchpoints,
-    requiredApprovals: row.required_approvals,
-    decisionMakers: row.decision_makers,
-    gatekeepers: row.gatekeepers,
-    influencers: row.influencers,
-    buyerUniverse: row.buyer_universe,
-    investorUniverse: row.investor_universe,
-    strategicPartners: row.strategic_partners,
+    governmentTouchpoints: coerceStringArray(row.government_touchpoints),
+    requiredApprovals: coerceStringArray(row.required_approvals),
+    decisionMakers: coerceStringArray(row.decision_makers),
+    gatekeepers: coerceStringArray(row.gatekeepers),
+    influencers: coerceStringArray(row.influencers),
+    buyerUniverse: coerceStringArray(row.buyer_universe),
+    investorUniverse: coerceStringArray(row.investor_universe),
+    strategicPartners: coerceStringArray(row.strategic_partners),
     relationshipThesis: row.relationship_thesis ?? undefined,
     accessStrategy: row.access_strategy ?? undefined,
     outreachAngle: row.outreach_angle ?? undefined,
     valueProposition: row.value_proposition ?? undefined,
-    proofPoints: row.proof_points,
-    materialsRequired: row.materials_required,
-    diligenceRequirements: row.diligence_requirements,
+    proofPoints: coerceStringArray(row.proof_points),
+    materialsRequired: coerceStringArray(row.materials_required),
+    diligenceRequirements: coerceStringArray(row.diligence_requirements),
     dataRoomStatus: row.data_room_status ?? undefined,
     confidentialityLevel: row.confidentiality_level ?? undefined,
     conflictConstraints: row.conflict_constraints ?? undefined,
@@ -559,18 +563,18 @@ function mapMandate(row: {
     incumbentRelationships: row.incumbent_relationships ?? undefined,
     risks: row.risks ?? undefined,
     blockers: row.blockers ?? undefined,
-    openQuestions: row.open_questions,
-    successCriteria: row.success_criteria,
-    disqualificationCriteria: row.disqualification_criteria,
+    openQuestions: coerceStringArray(row.open_questions),
+    successCriteria: coerceStringArray(row.success_criteria),
+    disqualificationCriteria: coerceStringArray(row.disqualification_criteria),
     nextMilestone: row.next_milestone ?? undefined,
     owner: row.owner ?? undefined,
     priority: row.priority ?? undefined,
-    sourceConfidence: row.source_confidence ?? undefined,
+    sourceConfidence: sourceConfidence ?? undefined,
     lastReviewedDate: row.last_reviewed_date ?? undefined,
-    tags: row.tags,
+    tags: coerceStringArray(row.tags),
     notes: row.notes ?? undefined,
     status: row.status,
-    relevantContacts: row.relevant_contacts,
+    relevantContacts: coerceInteger(row.relevant_contacts),
     nextAction: row.next_action ?? "Define next action",
     isMockData: isMockSeedId(row.id)
   };
@@ -620,8 +624,23 @@ function isMockSeedId(id: string) {
   return mockSeedIds.has(id) || id.startsWith("p-") || id.startsWith("r-") || id.startsWith("i-") || id.startsWith("m-") || id.startsWith("q-") || id.startsWith("t-");
 }
 
+function coerceStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function coerceNumber(value: unknown) {
+  const numericValue = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(numericValue) ? numericValue : undefined;
+}
+
+function coerceInteger(value: unknown) {
+  return Math.max(0, Math.trunc(coerceNumber(value) ?? 0));
+}
+
 function clampStrength(value: number): Person["relationshipStrength"] {
-  if (value >= 5) return 5;
-  if (value <= 1) return 1;
-  return value as Person["relationshipStrength"];
+  const numericValue = coerceNumber(value) ?? 1;
+  if (numericValue >= 5) return 5;
+  if (numericValue <= 1) return 1;
+  return Math.trunc(numericValue) as Person["relationshipStrength"];
 }
