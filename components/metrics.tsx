@@ -16,7 +16,7 @@ export function Metrics({ data }: { data: AppData }) {
 
   const metrics = [
     {
-      label: "Overlap signals",
+      label: "Shared-context signals",
       value: overlapSignals,
       context: "interests, institutions, and mandate links"
     },
@@ -26,19 +26,19 @@ export function Metrics({ data }: { data: AppData }) {
       context: "live reasons to bring people together"
     },
     {
-      label: "Bridgeable contacts",
+      label: "Mandate-linked contacts",
       value: bridgeableContacts,
       context: "warm enough and tied to an ask"
     },
     {
-      label: "Introductions queued",
+      label: "Outreach approvals",
       value: awaitingOutreach,
       context: "drafts or approvals ready for action"
     }
   ];
 
   return (
-    <section className="metrics" aria-label="Command metrics">
+    <section className="metrics" aria-label="Workspace counts">
       {metrics.map((metric) => (
         <article className="metric" key={metric.label}>
           <div className="metric-label">{metric.label}</div>

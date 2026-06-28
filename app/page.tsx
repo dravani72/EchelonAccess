@@ -16,9 +16,9 @@ export default async function Home() {
         <div className="page">
           <div className="stack">
             <section>
-              <h1 className="section-title">Network Intermediation Desk</h1>
+              <h1 className="section-title">Relationship Workspace</h1>
               <p className="section-kicker">
-                Build introductions across mutual interests, mandate overlap, data parities, and credible access paths.
+                Open focused modules for connection mapping, introduction scoring, people records, mandate definition, organization scope, and outreach review.
               </p>
             </section>
 

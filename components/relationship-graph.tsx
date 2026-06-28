@@ -44,7 +44,7 @@ const nodeWidth = 172;
 const nodeHeight = 78;
 
 const focusOptions: { label: string; value: GraphFocus }[] = [
-  { label: "Relationship surface", value: "relationship" },
+  { label: "All connection types", value: "relationship" },
   { label: "Mandate-led", value: "mandate" },
   { label: "Institution-led", value: "institution" },
   { label: "People-led", value: "people" }
@@ -100,8 +100,8 @@ export function RelationshipGraph({ data }: { data: AppData }) {
     <section className="relationship-graph-panel" aria-label="Relationship graph">
       <div className="relationship-graph-header">
         <div>
-          <div className="field-label">Relationship Graph</div>
-          <h3 className="relationship-graph-title">Mandates, people, and institutions as a working map</h3>
+          <div className="field-label">Relationship Map</div>
+          <h3 className="relationship-graph-title">Drag entities to inspect connection paths</h3>
         </div>
         <div className="relationship-graph-stats">
           <Badge tone="green">{graph.stats.people} people</Badge>
